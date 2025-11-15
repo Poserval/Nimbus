@@ -1,71 +1,57 @@
-import { CLOUD_REGISTRY } from './cloudRegistry';
-import GoogleDriveService from './googleDrive';
-// Импортируем другие сервисы по мере создания
-// import DropboxService from './dropbox';
-// import MailRuService from './mailru';
-// import TeraBoxService from './terabox';
+// Добавь эти методы в класс CloudManager:
 
-class CloudManager {
-  constructor() {
-    this.connectedServices = new Map();
-    this.serviceInstances = new Map();
+// Получение файлов из конкретного сервиса
+async getFilesFromService(serviceId) {
+  try {
+    const service = this.connectedServices.get(serviceId);
+    if (!service) {
+      throw new Error(`Сервис ${serviceId} не подключен`);
+    }
     
-    // Динамическая загрузка сервисов
-    this.initializeServices();
-  }
-
-  initializeServices() {
-    // Здесь будем подгружать сервисы по мере их реализации
-    this.serviceInstances.set('google_drive', GoogleDriveService);
-    
-    // Заглушки для остальных сервисов
-    Object.keys(CLOUD_REGISTRY).forEach(serviceId => {
-      if (!this.serviceInstances.has(serviceId)) {
-        this.serviceInstances.set(serviceId, this.createStubService(serviceId));
-      }
-    });
-  }
-
-  createStubService(serviceId) {
-    return {
-      authenticate: async () => {
-        throw new Error(`Сервис ${CLOUD_REGISTRY[serviceId].name} в разработке`);
-      },
-      getFiles: async () => [],
-      getStorageInfo: async () => ({
-        used: '0 GB',
-        total: '0 GB',
-        available: '0 GB'
-      })
-    };
-  }
-
-  // Получаем ВСЕ доступные облака
-  getAllAvailableServices() {
-    return Object.entries(CLOUD_REGISTRY).map(([id, config]) => ({
-      id,
-      name: config.name,
-      logo: config.logo,
-      supported: config.supported,
-      authType: config.authType,
-      connected: this.connectedServices.has(id)
+    const files = await service.getFiles();
+    return files.map(file => ({
+      ...file,
+      service: serviceId,
+      serviceName: this.getServiceName(serviceId)
     }));
-  }
-
-  // Получаем облака по категориям
-  getServicesByCategory() {
-    const categories = {};
-    const services = this.getAllAvailableServices();
-    
-    services.forEach(service => {
-      if (!categories[service.category]) {
-        categories[service.category] = [];
-      }
-      categories[service.category].push(service);
-    });
-    
-    return categories;
+  } catch (error) {
+    console.error(`Get files from ${serviceId} error:`, error);
+    throw error;
   }
 }
 
-export default new CloudManager();
+// Удаление файла из конкретного сервиса
+async deleteFileFromService(fileId, serviceId) {
+  try {
+    const service = this.connectedServices.get(serviceId);
+    if (!service) {
+      throw new Error(`Сервис ${serviceId} не подключен`);
+    }
+    
+    const result = await service.deleteFile(fileId);
+    return result;
+  } catch (error) {
+    console.error(`Delete file from ${serviceId} error:`, error);
+    throw error;
+  }
+}
+
+// Получение информации о конкретном сервисе
+async getServiceInfo(serviceId) {
+  try {
+    const service = this.connectedServices.get(serviceId);
+    if (!service) {
+      throw new Error(`Сервис ${serviceId} не подключен`);
+    }
+    
+    const storageInfo = await service.getStorageInfo();
+    return {
+      service: serviceId,
+      serviceName: this.getServiceName(serviceId),
+      ...storageInfo
+    };
+  } catch (error) {
+    console.error(`Get service info from ${serviceId} error:`, error);
+    throw error;
+  }
+}
