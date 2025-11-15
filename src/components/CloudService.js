@@ -13,9 +13,22 @@ const CloudService = ({ service, onConnect, onManage }) => {
       </Card.Content>
       <Card.Actions>
         {!service.connected ? (
-          <Button onPress={() => onConnect(service.id)}>Подключить</Button>
+          <Button 
+            mode="contained" 
+            onPress={() => onConnect(service.id)}
+            buttonColor="#4285F4"
+            textColor="white"
+          >
+            Подключить
+          </Button>
         ) : (
-          <Button onPress={() => onManage(service.id)}>Управлять</Button>
+          <Button 
+            mode="outlined" 
+            onPress={() => onManage(service.id)}
+            textColor="#34A853"
+          >
+            Управлять
+          </Button>
         )}
       </Card.Actions>
     </Card>
