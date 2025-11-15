@@ -1,23 +1,28 @@
 import React from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View } from 'react-native';
-import { Provider as PaperProvider } from 'react-native-paper';
-import HomeScreen from './src/screens/HomeScreen';
+import { View, Text, StyleSheet } from 'react-native';
 
 export default function App() {
   return (
-    <PaperProvider>
-      <View style={styles.container}>
-        <HomeScreen />
-        <StatusBar style="auto" />
-      </View>
-    </PaperProvider>
+    <View style={styles.container}>
+      <Text style={styles.text}>Nimbus Live Test 🚀</Text>
+      <Text style={styles.subtext}>База работает!</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  text: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  subtext: {
+    fontSize: 16,
+    marginTop: 10,
   },
 });
