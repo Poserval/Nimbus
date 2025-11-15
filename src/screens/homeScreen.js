@@ -1,54 +1,83 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView } from 'react-native';
-import { Title, FAB } from 'react-native-paper';
+import { ScrollView, Alert } from 'react-native';
+import { Title, FAB, ActivityIndicator } from 'react-native-paper';
 import { globalStyles } from '../styles/globalStyles';
 import CloudService from '../components/CloudService';
+import CloudManager from '../services/cloudManager';
 
-// Это временные мок-данные. Позже мы заменим их реальными данными из API.
-const mockCloudServices = [
+const AVAILABLE_SERVICES = [
   {
-    id: 1,
+    id: 'google_drive',
     name: 'Google Drive',
-    connected: true,
-    usedSpace: '15.2 GB',
-    totalSpace: '100 GB',
-    icon: 'google-drive', // Это потребует настройки иконок
+    connected: false,
+    usedSpace: '0 GB',
+    totalSpace: '0 GB',
   },
   {
-    id: 2,
+    id: 'dropbox', 
     name: 'Dropbox',
     connected: false,
     usedSpace: '0 GB',
     totalSpace: '0 GB',
-    icon: 'dropbox', // Это потребует настройки иконок
   },
   {
-    id: 3,
-    name: 'OneDrive',
+    id: 'yandex_disk',
+    name: 'Яндекс Диск',
     connected: false,
-    usedSpace: '0 GB',
+    usedSpace: '0 GB', 
     totalSpace: '0 GB',
-    icon: 'microsoft-onedrive',
   },
 ];
 
-export default function HomeScreen() {
-  const [services, setServices] = useState(mockCloudServices);
+export default function HomeScreen({ navigation }) {
+  const [services, setServices] = useState(AVAILABLE_SERVICES);
+  const [loading, setLoading] = useState(false);
 
-  // Здесь позже будет функция для загрузки реальных данных
   useEffect(() => {
-    // loadCloudServices();
+    loadConnectedServices();
   }, []);
 
-  const handleConnectService = (serviceId) => {
-    console.log('Connect to service:', serviceId);
-    // Здесь будет логика авторизации
+  const loadConnectedServices = async () => {
+    // Позже добавим загрузку из хранилища
+  };
+
+  const handleConnectService = async (serviceId) => {
+    setLoading(true);
+    try {
+      const success = await CloudManager.connectService(serviceId);
+      if (success) {
+        Alert.alert('Успех!', `${serviceId} подключен`);
+        // Обновляем статус сервиса
+        updateServiceStatus(serviceId, true);
+      } else {
+        Alert.alert('Ошибка', 'Не удалось подключить сервис');
+      }
+    } catch (error) {
+      Alert.alert('Ошибка', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleManageService = (serviceId) => {
-    console.log('Manage service:', serviceId);
-    // Здесь будет навигация на экран управления файлами
+    navigation.navigate('Files', { serviceId });
   };
+
+  const updateServiceStatus = (serviceId, connected) => {
+    setServices(prev => prev.map(service => 
+      service.id === serviceId 
+        ? { ...service, connected }
+        : service
+    ));
+  };
+
+  if (loading) {
+    return (
+      <View style={globalStyles.container}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
     <>
@@ -63,7 +92,7 @@ export default function HomeScreen() {
           />
         ))}
       </ScrollView>
-      {/* Кнопка для добавления нового сервиса */}
+      
       <FAB
         style={{
           position: 'absolute',
@@ -71,8 +100,8 @@ export default function HomeScreen() {
           right: 0,
           bottom: 0,
         }}
-        icon="plus"
-        onPress={() => console.log('Add new service')}
+        icon="refresh"
+        onPress={loadConnectedServices}
       />
     </>
   );
