@@ -30,51 +30,44 @@
             pointer-events: none;
         }
 
+        /* Контент поверх слоя */
         .content {
             position: relative;
             z-index: 1;
-            padding: 20px;
-        }
-
-        .back-button {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            width: 50px;
-            height: 50px;
-            background: rgba(26, 35, 126, 0.8);
-            border-radius: 50%;
             display: flex;
-            align-items: center;
             justify-content: center;
+            padding-top: 60px;
+        }
+
+        /* Убираем все выделения при нажатии */
+        .aggregator-icon {
+            width: 200px;
+            height: auto;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+            user-select: none;
         }
 
-        .back-button:hover {
+        .aggregator-icon:hover {
             transform: scale(1.05);
-            background: rgba(26, 35, 126, 1);
         }
 
-        .back-button span {
-            color: white;
-            font-size: 28px;
-            font-weight: bold;
+        /* Убираем выделение у родительского элемента */
+        .content * {
+            -webkit-tap-highlight-color: transparent;
         }
     </style>
 </head>
 <body>
     <div class="content">
-        <div class="back-button" id="backButton">
-            <span>←</span>
-        </div>
-        <!-- Здесь позже будут иконки агрегаторов -->
+        <img src="assets/cloud-icon1.png" alt="Aggregators" class="aggregator-icon" id="aggregatorIcon">
     </div>
 
     <script>
-        const backButton = document.getElementById('backButton');
-        backButton.addEventListener('click', () => {
+        const aggregatorIcon = document.getElementById('aggregatorIcon');
+        aggregatorIcon.addEventListener('click', () => {
             window.location.href = 'home.html';
         });
     </script>
