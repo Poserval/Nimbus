@@ -120,8 +120,8 @@
         <div class="columns-container">
             <!-- Левая колонка -->
             <div class="column">
-                <img src="assets/cloud-icon1.png" alt="Aggregator 1" class="aggregator-icon" id="agg1">
-                <img src="assets/cloud-icon1.png" alt="Aggregator 3" class="aggregator-icon" id="agg3">
+                <img src="assets/cloud-icon-google.png" alt="Google Drive" class="aggregator-icon" id="agg1">
+                <img src="assets/cloud-icon-yandex.png" alt="Yandex Disk" class="aggregator-icon" id="agg3">
             </div>
 
             <!-- Правая колонка -->
@@ -139,12 +139,26 @@
             window.location.href = 'home.html';
         });
 
-        // Обработчики для иконок агрегаторов (пока заглушки)
-        const aggregators = [agg1, agg2, agg3, agg4];
-        aggregators.forEach((agg, index) => {
-            agg.addEventListener('click', () => {
-                alert(`Агрегатор ${index + 1}\nФункционал будет добавлен позже`);
-            });
+        // Обработчики для иконок агрегаторов
+        const agg1 = document.getElementById('agg1');
+        const agg2 = document.getElementById('agg2');
+        const agg3 = document.getElementById('agg3');
+        const agg4 = document.getElementById('agg4');
+
+        agg1.addEventListener('click', () => {
+            alert('Google Drive\nФункционал будет добавлен позже');
+        });
+
+        agg2.addEventListener('click', () => {
+            alert('Агрегатор 2\nФункционал будет добавлен позже');
+        });
+
+        agg3.addEventListener('click', () => {
+            alert('Яндекс Диск\nФункционал будет добавлен позже');
+        });
+
+        agg4.addEventListener('click', () => {
+            alert('Агрегатор 4\nФункционал будет добавлен позже');
         });
     </script>
 </body>
