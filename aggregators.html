@@ -56,22 +56,22 @@
             transform: scale(1.05);
         }
 
-        /* Контейнер для двух рядов иконок */
-        .icons-grid {
+        /* Контейнер для двух колонок */
+        .columns-container {
             display: flex;
-            flex-direction: column;
-            gap: 30px;
+            justify-content: center;
             width: 100%;
-            max-width: 500px;
+            max-width: 600px;
+            gap: 20px;
         }
 
-        /* Каждый ряд: две иконки слева и справа */
-        .icon-row {
+        /* Левая и правая колонки */
+        .column {
+            flex: 1;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
-            width: 100%;
-            padding: 0 20px;
+            gap: 30px;
         }
 
         /* Стиль для маленьких иконок */
@@ -102,10 +102,10 @@
             .aggregator-icon {
                 width: 70px;
             }
-            .icon-row {
-                padding: 0 10px;
+            .columns-container {
+                gap: 15px;
             }
-            .icons-grid {
+            .column {
                 gap: 20px;
             }
         }
@@ -116,16 +116,17 @@
         <!-- Иконка возврата на главный экран -->
         <img src="assets/cloud-icon1.png" alt="Back" class="back-icon" id="backIcon">
 
-        <!-- Сетка с иконками агрегаторов -->
-        <div class="icons-grid">
-            <!-- Первый ряд: левая и правая иконки -->
-            <div class="icon-row">
+        <!-- Две колонки: левая и правая -->
+        <div class="columns-container">
+            <!-- Левая колонка -->
+            <div class="column">
                 <img src="assets/cloud-icon1.png" alt="Aggregator 1" class="aggregator-icon" id="agg1">
-                <img src="assets/cloud-icon1.png" alt="Aggregator 2" class="aggregator-icon" id="agg2">
-            </div>
-            <!-- Второй ряд: левая и правая иконки -->
-            <div class="icon-row">
                 <img src="assets/cloud-icon1.png" alt="Aggregator 3" class="aggregator-icon" id="agg3">
+            </div>
+
+            <!-- Правая колонка -->
+            <div class="column">
+                <img src="assets/cloud-icon1.png" alt="Aggregator 2" class="aggregator-icon" id="agg2">
                 <img src="assets/cloud-icon1.png" alt="Aggregator 4" class="aggregator-icon" id="agg4">
             </div>
         </div>
