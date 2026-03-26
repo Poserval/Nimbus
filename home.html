@@ -18,7 +18,7 @@
             min-height: 100vh;
         }
 
-        /* Белый полупрозрачный слой поверх фона (осветление) */
+        /* Белый полупрозрачный слой (осветление 0.7) */
         body::before {
             content: "";
             position: fixed;
@@ -29,8 +29,38 @@
             background-color: rgba(255, 255, 255, 0.7);
             pointer-events: none;
         }
+
+        /* Контент поверх слоя */
+        .content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            padding-top: 60px;
+        }
+
+        .cloud-icon {
+            width: 100px;
+            height: 100px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .cloud-icon:hover {
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
+    <div class="content">
+        <img src="assets/cloud-icon.png" alt="Cloud" class="cloud-icon" id="cloudIcon">
+    </div>
+
+    <script>
+        const cloudIcon = document.getElementById('cloudIcon');
+        cloudIcon.addEventListener('click', () => {
+            window.location.href = 'aggregators.html';
+        });
+    </script>
 </body>
 </html>
