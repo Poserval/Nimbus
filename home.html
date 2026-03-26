@@ -39,15 +39,24 @@
             padding-top: 60px;
         }
 
+        /* Убираем все выделения при нажатии */
         .cloud-icon {
             width: 200px;
             height: auto;
             cursor: pointer;
             transition: transform 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+            user-select: none;
         }
 
         .cloud-icon:hover {
             transform: scale(1.05);
+        }
+
+        /* Убираем выделение у родительского элемента */
+        .content * {
+            -webkit-tap-highlight-color: transparent;
         }
     </style>
 </head>
