@@ -5,19 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Nimbus - Агрегаторы</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: url('assets/icon-background.png') no-repeat center center fixed;
             background-size: cover;
             min-height: 100vh;
         }
-
         body::before {
             content: "";
             position: fixed;
@@ -28,7 +22,6 @@
             background-color: rgba(255, 255, 255, 0.7);
             pointer-events: none;
         }
-
         .content {
             position: relative;
             z-index: 1;
@@ -37,7 +30,6 @@
             align-items: center;
             padding-top: 60px;
         }
-
         .back-icon {
             width: 200px;
             height: auto;
@@ -48,11 +40,7 @@
             user-select: none;
             margin-bottom: 40px;
         }
-
-        .back-icon:hover {
-            transform: scale(1.05);
-        }
-
+        .back-icon:hover { transform: scale(1.05); }
         .columns-container {
             display: flex;
             justify-content: center;
@@ -60,7 +48,6 @@
             max-width: 600px;
             gap: 20px;
         }
-
         .column {
             flex: 1;
             display: flex;
@@ -68,7 +55,6 @@
             align-items: center;
             gap: 30px;
         }
-
         .aggregator-icon {
             width: 100px;
             height: auto;
@@ -78,19 +64,13 @@
             outline: none;
             user-select: none;
         }
-
-        .aggregator-icon:hover {
-            transform: scale(1.05);
-        }
-
+        .aggregator-icon:hover { transform: scale(1.05); }
         @media (max-width: 600px) {
             .back-icon { width: 150px; }
             .aggregator-icon { width: 70px; }
             .columns-container { gap: 15px; }
             .column { gap: 20px; }
         }
-
-        /* Стили для всплывающего окна (попап) */
         .popup {
             position: fixed;
             top: 0;
@@ -126,15 +106,11 @@
             border-radius: 25px;
             cursor: pointer;
         }
-        .popup-content button:hover {
-            background: #0d1642;
-        }
     </style>
 </head>
 <body>
     <div class="content">
         <img src="assets/cloud-icon1.png" alt="Back" class="back-icon" id="backIcon">
-
         <div class="columns-container">
             <div class="column">
                 <img src="assets/cloud-icon-google.png" alt="Google Drive" class="aggregator-icon" id="googleIcon">
@@ -147,46 +123,53 @@
         </div>
     </div>
 
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
     <script>
-        // === ПАРАМЕТРЫ ===
-        const CLIENT_ID = '944030768816-a457aqu0q8bhdiftsbjo7oileg4jjuov.apps.googleusercontent.com';
-        const REDIRECT_URI = encodeURIComponent('https://poserval.github.io/Nimbus/aggregators.html');
-        const AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/drive.readonly&access_type=offline`;
-        const TOKEN_PROXY = 'https://oauth-proxy.vercel.app/token'; // публичный прокси
+        // === НАСТРОЙКИ AUTH0 ===
+        // (Замени на свои данные после создания приложения)
+        const AUTH0_DOMAIN = 'YOUR_AUTH0_DOMAIN'; // например, dev-abc123.us.auth0.com
+        const AUTH0_CLIENT_ID = 'YOUR_AUTH0_CLIENT_ID';
+
+        let auth0Client = null;
+
+        async function initAuth0() {
+            auth0Client = await createAuth0Client({
+                domain: AUTH0_DOMAIN,
+                clientId: AUTH0_CLIENT_ID,
+                authorizationParams: {
+                    redirect_uri: window.location.origin + '/aggregators.html',
+                    scope: 'openid profile email'
+                }
+            });
+        }
 
         // === ХРАНИЛИЩЕ ===
         let accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
 
-        // === ФУНКЦИИ ===
         function saveAccounts() {
             localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
-            updateHomeScreenIcons();
         }
 
-        function updateHomeScreenIcons() {
-            // Сохраняем данные в localStorage, чтобы home.html мог их прочитать
-            localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
-        }
-
-        function showNamePopup(accessToken) {
+        function showNamePopup(accessToken, userInfo) {
             const popup = document.createElement('div');
             popup.className = 'popup';
             popup.innerHTML = `
                 <div class="popup-content">
                     <h3>Название аккаунта</h3>
-                    <input type="text" id="accountName" placeholder="Например: Google (рабочий)" value="Google">
+                    <input type="text" id="accountName" placeholder="Например: Google (рабочий)" value="${userInfo.email.split('@')[0]}">
                     <button id="saveNameBtn">Сохранить</button>
                 </div>
             `;
             document.body.appendChild(popup);
 
             document.getElementById('saveNameBtn').onclick = () => {
-                const name = document.getElementById('accountName').value.trim() || 'Google';
+                const name = document.getElementById('accountName').value.trim() || userInfo.email;
                 accounts.push({
                     id: Date.now(),
                     service: 'google',
                     name: name,
-                    accessToken: accessToken
+                    accessToken: accessToken,
+                    email: userInfo.email
                 });
                 saveAccounts();
                 popup.remove();
@@ -194,61 +177,25 @@
             };
         }
 
-        async function exchangeCodeForToken(code) {
-            try {
-                const response = await fetch(TOKEN_PROXY, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code, provider: 'google' })
-                });
-                const data = await response.json();
-                if (data.access_token) {
-                    showNamePopup(data.access_token);
-                } else {
-                    alert('Ошибка получения токена');
-                }
-            } catch (err) {
-                alert('Ошибка соединения с сервером');
-            }
-        }
-
-        function startGoogleAuth() {
-            const popup = window.open(AUTH_URL, 'googleAuth', 'width=500,height=600');
-            window.addEventListener('message', async (event) => {
-                if (event.data && event.data.code) {
-                    await exchangeCodeForToken(event.data.code);
-                    popup.close();
-                }
-            });
-        }
-
-        function handleGoogleRedirect() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            if (code) {
-                // Убираем code из URL, чтобы не мешал
-                window.history.replaceState({}, document.title, window.location.pathname);
-                exchangeCodeForToken(code);
-            }
+        async function startGoogleAuth() {
+            if (!auth0Client) await initAuth0();
+            await auth0Client.loginWithPopup();
+            const token = await auth0Client.getTokenSilently();
+            const user = await auth0Client.getUser();
+            showNamePopup(token, user);
         }
 
         // === ОБРАБОТЧИКИ ===
         document.getElementById('backIcon').onclick = () => {
             window.location.href = 'home.html';
         };
-
-        document.getElementById('googleIcon').onclick = () => {
-            startGoogleAuth();
-        };
-
-        document.getElementById('yandexIcon').onclick = () => {
-            alert('Яндекс Диск будет добавлен позже');
-        };
+        document.getElementById('googleIcon').onclick = startGoogleAuth;
+        document.getElementById('yandexIcon').onclick = () => alert('Яндекс Диск будет добавлен позже');
         document.getElementById('agg2').onclick = () => alert('Агрегатор 2 будет добавлен позже');
         document.getElementById('agg4').onclick = () => alert('Агрегатор 4 будет добавлен позже');
 
-        // Проверяем, не вернулись ли мы с code
-        handleGoogleRedirect();
+        // Инициализация
+        initAuth0();
     </script>
 </body>
 </html>
