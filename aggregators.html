@@ -18,7 +18,6 @@
             min-height: 100vh;
         }
 
-        /* Белый полупрозрачный слой (осветление 0.7) */
         body::before {
             content: "";
             position: fixed;
@@ -30,7 +29,6 @@
             pointer-events: none;
         }
 
-        /* Контент поверх слоя */
         .content {
             position: relative;
             z-index: 1;
@@ -40,7 +38,6 @@
             padding-top: 60px;
         }
 
-        /* Стиль для верхней иконки (возврат на главный экран) */
         .back-icon {
             width: 200px;
             height: auto;
@@ -56,7 +53,6 @@
             transform: scale(1.05);
         }
 
-        /* Контейнер для двух колонок */
         .columns-container {
             display: flex;
             justify-content: center;
@@ -65,7 +61,6 @@
             gap: 20px;
         }
 
-        /* Левая и правая колонки */
         .column {
             flex: 1;
             display: flex;
@@ -74,7 +69,6 @@
             gap: 30px;
         }
 
-        /* Стиль для маленьких иконок */
         .aggregator-icon {
             width: 100px;
             height: auto;
@@ -89,42 +83,63 @@
             transform: scale(1.05);
         }
 
-        /* Убираем выделение у всех элементов */
-        .content * {
-            -webkit-tap-highlight-color: transparent;
+        @media (max-width: 600px) {
+            .back-icon { width: 150px; }
+            .aggregator-icon { width: 70px; }
+            .columns-container { gap: 15px; }
+            .column { gap: 20px; }
         }
 
-        /* Адаптивность для мобильных */
-        @media (max-width: 600px) {
-            .back-icon {
-                width: 150px;
-            }
-            .aggregator-icon {
-                width: 70px;
-            }
-            .columns-container {
-                gap: 15px;
-            }
-            .column {
-                gap: 20px;
-            }
+        /* Стили для всплывающего окна (попап) */
+        .popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .popup-content {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            width: 280px;
+            text-align: center;
+        }
+        .popup-content input {
+            width: 100%;
+            padding: 10px;
+            margin: 15px 0;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        .popup-content button {
+            background: #1a237e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+        }
+        .popup-content button:hover {
+            background: #0d1642;
         }
     </style>
 </head>
 <body>
     <div class="content">
-        <!-- Иконка возврата на главный экран -->
         <img src="assets/cloud-icon1.png" alt="Back" class="back-icon" id="backIcon">
 
-        <!-- Две колонки: левая и правая -->
         <div class="columns-container">
-            <!-- Левая колонка -->
             <div class="column">
-                <img src="assets/cloud-icon-google.png" alt="Google Drive" class="aggregator-icon" id="agg1">
-                <img src="assets/cloud-icon-yandex.png" alt="Yandex Disk" class="aggregator-icon" id="agg3">
+                <img src="assets/cloud-icon-google.png" alt="Google Drive" class="aggregator-icon" id="googleIcon">
+                <img src="assets/cloud-icon-yandex.png" alt="Yandex Disk" class="aggregator-icon" id="yandexIcon">
             </div>
-
-            <!-- Правая колонка -->
             <div class="column">
                 <img src="assets/cloud-icon1.png" alt="Aggregator 2" class="aggregator-icon" id="agg2">
                 <img src="assets/cloud-icon1.png" alt="Aggregator 4" class="aggregator-icon" id="agg4">
@@ -133,33 +148,107 @@
     </div>
 
     <script>
-        // Возврат на главный экран
-        const backIcon = document.getElementById('backIcon');
-        backIcon.addEventListener('click', () => {
+        // === ПАРАМЕТРЫ ===
+        const CLIENT_ID = '944030768816-a457aqu0q8bhdiftsbjo7oileg4jjuov.apps.googleusercontent.com';
+        const REDIRECT_URI = encodeURIComponent('https://poserval.github.io/Nimbus/aggregators.html');
+        const AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/drive.readonly&access_type=offline`;
+        const TOKEN_PROXY = 'https://oauth-proxy.vercel.app/token'; // публичный прокси
+
+        // === ХРАНИЛИЩЕ ===
+        let accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+
+        // === ФУНКЦИИ ===
+        function saveAccounts() {
+            localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+            updateHomeScreenIcons();
+        }
+
+        function updateHomeScreenIcons() {
+            // Сохраняем данные в localStorage, чтобы home.html мог их прочитать
+            localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+        }
+
+        function showNamePopup(accessToken) {
+            const popup = document.createElement('div');
+            popup.className = 'popup';
+            popup.innerHTML = `
+                <div class="popup-content">
+                    <h3>Название аккаунта</h3>
+                    <input type="text" id="accountName" placeholder="Например: Google (рабочий)" value="Google">
+                    <button id="saveNameBtn">Сохранить</button>
+                </div>
+            `;
+            document.body.appendChild(popup);
+
+            document.getElementById('saveNameBtn').onclick = () => {
+                const name = document.getElementById('accountName').value.trim() || 'Google';
+                accounts.push({
+                    id: Date.now(),
+                    service: 'google',
+                    name: name,
+                    accessToken: accessToken
+                });
+                saveAccounts();
+                popup.remove();
+                alert('Аккаунт добавлен! Перейдите на главный экран.');
+            };
+        }
+
+        async function exchangeCodeForToken(code) {
+            try {
+                const response = await fetch(TOKEN_PROXY, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, provider: 'google' })
+                });
+                const data = await response.json();
+                if (data.access_token) {
+                    showNamePopup(data.access_token);
+                } else {
+                    alert('Ошибка получения токена');
+                }
+            } catch (err) {
+                alert('Ошибка соединения с сервером');
+            }
+        }
+
+        function startGoogleAuth() {
+            const popup = window.open(AUTH_URL, 'googleAuth', 'width=500,height=600');
+            window.addEventListener('message', async (event) => {
+                if (event.data && event.data.code) {
+                    await exchangeCodeForToken(event.data.code);
+                    popup.close();
+                }
+            });
+        }
+
+        function handleGoogleRedirect() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            if (code) {
+                // Убираем code из URL, чтобы не мешал
+                window.history.replaceState({}, document.title, window.location.pathname);
+                exchangeCodeForToken(code);
+            }
+        }
+
+        // === ОБРАБОТЧИКИ ===
+        document.getElementById('backIcon').onclick = () => {
             window.location.href = 'home.html';
-        });
+        };
 
-        // Обработчики для иконок агрегаторов
-        const agg1 = document.getElementById('agg1');
-        const agg2 = document.getElementById('agg2');
-        const agg3 = document.getElementById('agg3');
-        const agg4 = document.getElementById('agg4');
+        document.getElementById('googleIcon').onclick = () => {
+            startGoogleAuth();
+        };
 
-        agg1.addEventListener('click', () => {
-            alert('Google Drive\nФункционал будет добавлен позже');
-        });
+        document.getElementById('yandexIcon').onclick = () => {
+            alert('Яндекс Диск будет добавлен позже');
+        };
+        document.getElementById('agg2').onclick = () => alert('Агрегатор 2 будет добавлен позже');
+        document.getElementById('agg4').onclick = () => alert('Агрегатор 4 будет добавлен позже');
 
-        agg2.addEventListener('click', () => {
-            alert('Агрегатор 2\nФункционал будет добавлен позже');
-        });
-
-        agg3.addEventListener('click', () => {
-            alert('Яндекс Диск\nФункционал будет добавлен позже');
-        });
-
-        agg4.addEventListener('click', () => {
-            alert('Агрегатор 4\nФункционал будет добавлен позже');
-        });
+        // Проверяем, не вернулись ли мы с code
+        handleGoogleRedirect();
     </script>
 </body>
 </html>
