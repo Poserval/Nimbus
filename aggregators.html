@@ -120,12 +120,17 @@
         const CLIENT_ID = '944030768816-3e8d7vrpgio1qgsfd4jgljevjldmin62.apps.googleusercontent.com';
         const REDIRECT_URI = encodeURIComponent('https://poserval.github.io/Nimbus/aggregators.html');
         const AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/drive.readonly&access_type=offline`;
+        
+        // Публичный прокси (секрет хранится на сервере)
+        const PROXY_URL = 'https://oauth-proxy.cyclic.app/token';
 
         // === ХРАНИЛИЩЕ ===
         let accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
 
         function saveAccounts() {
             localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+            // Уведомляем главный экран об обновлении
+            localStorage.setItem('nimbus_accounts_updated', Date.now().toString());
         }
 
         function showNamePopup(accessToken, email) {
@@ -151,43 +156,52 @@
                 });
                 saveAccounts();
                 popup.remove();
-                alert('Аккаунт добавлен! Перейдите на главный экран.');
+                alert('Аккаунт добавлен! Нажмите "Назад" чтобы вернуться на главный экран.');
             };
         }
 
         async function exchangeCodeForToken(code) {
-            // Публичный прокси для обмена кода на токен
-            const proxyUrl = 'https://oauth-proxy.vercel.app/token';
             try {
-                const response = await fetch(proxyUrl, {
+                const response = await fetch(PROXY_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code, provider: 'google' })
                 });
                 const data = await response.json();
                 if (data.access_token) {
-                    // Получаем email пользователя
                     const userInfo = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
                         headers: { Authorization: `Bearer ${data.access_token}` }
                     });
                     const user = await userInfo.json();
                     showNamePopup(data.access_token, user.email);
                 } else {
-                    alert('Ошибка получения токена: ' + (data.error || 'неизвестная ошибка'));
+                    alert('Ошибка: ' + (data.error || 'не удалось получить токен'));
                 }
             } catch (err) {
-                alert('Ошибка соединения с сервером');
+                alert('Ошибка соединения. Попробуйте позже.');
             }
         }
 
         function startGoogleAuth() {
             const authWindow = window.open(AUTH_URL, 'googleAuth', 'width=500,height=600');
-            window.addEventListener('message', async (event) => {
-                if (event.data && event.data.code) {
-                    await exchangeCodeForToken(event.data.code);
-                    if (authWindow) authWindow.close();
+            const interval = setInterval(() => {
+                try {
+                    if (authWindow && authWindow.location.href.includes('aggregators.html')) {
+                        clearInterval(interval);
+                        const url = new URL(authWindow.location.href);
+                        const code = url.searchParams.get('code');
+                        if (code) {
+                            authWindow.close();
+                            exchangeCodeForToken(code);
+                        }
+                    }
+                } catch (e) {
+                    // cross-origin error, ignore
                 }
-            });
+                if (authWindow && authWindow.closed) {
+                    clearInterval(interval);
+                }
+            }, 500);
         }
 
         function handleGoogleRedirect() {
@@ -208,7 +222,6 @@
         document.getElementById('agg2').onclick = () => alert('Агрегатор 2 будет добавлен позже');
         document.getElementById('agg4').onclick = () => alert('Агрегатор 4 будет добавлен позже');
 
-        // Проверяем, не вернулись ли мы с code
         handleGoogleRedirect();
     </script>
 </body>
