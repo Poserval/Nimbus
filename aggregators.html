@@ -63,41 +63,6 @@
             .back-icon { width: 150px; }
             .aggregator-icon { width: 70px; }
         }
-        .popup {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .popup-content {
-            background: white;
-            padding: 20px;
-            border-radius: 20px;
-            width: 280px;
-            text-align: center;
-        }
-        .popup-content input {
-            width: 100%;
-            padding: 10px;
-            margin: 15px 0;
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            font-size: 16px;
-        }
-        .popup-content button {
-            background: #1a237e;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 25px;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -124,42 +89,6 @@
         // Публичный прокси (секрет хранится на сервере)
         const PROXY_URL = 'https://oauth-proxy.cyclic.app/token';
 
-        // === ХРАНИЛИЩЕ ===
-        let accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
-
-        function saveAccounts() {
-            localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
-            // Уведомляем главный экран об обновлении
-            localStorage.setItem('nimbus_accounts_updated', Date.now().toString());
-        }
-
-        function showNamePopup(accessToken, email) {
-            const popup = document.createElement('div');
-            popup.className = 'popup';
-            popup.innerHTML = `
-                <div class="popup-content">
-                    <h3>Название аккаунта</h3>
-                    <input type="text" id="accountName" placeholder="Например: Google (рабочий)" value="${email.split('@')[0]}">
-                    <button id="saveNameBtn">Сохранить</button>
-                </div>
-            `;
-            document.body.appendChild(popup);
-
-            document.getElementById('saveNameBtn').onclick = () => {
-                const name = document.getElementById('accountName').value.trim() || email;
-                accounts.push({
-                    id: Date.now(),
-                    service: 'google',
-                    name: name,
-                    accessToken: accessToken,
-                    email: email
-                });
-                saveAccounts();
-                popup.remove();
-                alert('Аккаунт добавлен! Нажмите "Назад" чтобы вернуться на главный экран.');
-            };
-        }
-
         async function exchangeCodeForToken(code) {
             try {
                 const response = await fetch(PROXY_URL, {
@@ -173,7 +102,8 @@
                         headers: { Authorization: `Bearer ${data.access_token}` }
                     });
                     const user = await userInfo.json();
-                    showNamePopup(data.access_token, user.email);
+                    // Переходим в файловый менеджер с токеном и email
+                    window.location.href = `storage.html?token=${data.access_token}&email=${encodeURIComponent(user.email)}`;
                 } else {
                     alert('Ошибка: ' + (data.error || 'не удалось получить токен'));
                 }
