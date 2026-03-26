@@ -3,22 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Nimbus</title>
+    <title>Nimbus - Мои облака</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: url('assets/icon-background.png') no-repeat center center fixed;
             background-size: cover;
             min-height: 100vh;
         }
-
-        /* Белый полупрозрачный слой (осветление 0.7) */
         body::before {
             content: "";
             position: fixed;
@@ -29,47 +22,125 @@
             background-color: rgba(255, 255, 255, 0.7);
             pointer-events: none;
         }
-
-        /* Контент поверх слоя */
         .content {
             position: relative;
             z-index: 1;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
             padding-top: 60px;
         }
-
-        /* Убираем все выделения при нажатии */
-        .cloud-icon {
+        .main-icon {
             width: 200px;
             height: auto;
             cursor: pointer;
             transition: transform 0.3s ease;
-            -webkit-tap-highlight-color: transparent;
-            outline: none;
-            user-select: none;
+            margin-bottom: 40px;
         }
-
-        .cloud-icon:hover {
-            transform: scale(1.05);
+        .main-icon:hover { transform: scale(1.05); }
+        .clouds-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            max-width: 800px;
+            margin: 20px;
         }
-
-        /* Убираем выделение у родительского элемента */
-        .content * {
-            -webkit-tap-highlight-color: transparent;
+        .cloud-card {
+            width: 100px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .cloud-card:hover { transform: translateY(-5px); }
+        .cloud-card img {
+            width: 100px;
+            height: auto;
+        }
+        .cloud-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1a237e;
+            margin-top: 8px;
+        }
+        .cloud-email {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .empty-message {
+            text-align: center;
+            color: #666;
+            margin-top: 50px;
+            font-size: 14px;
+        }
+        @media (max-width: 600px) {
+            .main-icon { width: 150px; }
+            .cloud-card { width: 80px; }
+            .cloud-card img { width: 80px; }
+            .cloud-name { font-size: 12px; }
         }
     </style>
 </head>
 <body>
     <div class="content">
-        <img src="assets/cloud-icon.png" alt="Cloud" class="cloud-icon" id="cloudIcon">
+        <img src="assets/cloud-icon.png" alt="Nimbus" class="main-icon" id="mainIcon">
+        <div id="cloudsList" class="clouds-container">
+            <!-- Сюда будут добавляться иконки облаков -->
+        </div>
     </div>
 
     <script>
-        const cloudIcon = document.getElementById('cloudIcon');
-        cloudIcon.addEventListener('click', () => {
+        // === ЗАГРУЗКА СПИСКА ОБЛАКОВ ===
+        function loadClouds() {
+            const accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+            const container = document.getElementById('cloudsList');
+            
+            if (accounts.length === 0) {
+                container.innerHTML = '<div class="empty-message">Нет подключенных облаков<br>Нажмите на иконку облака вверху, чтобы добавить</div>';
+                return;
+            }
+            
+            container.innerHTML = accounts.map(account => `
+                <div class="cloud-card" data-id="${account.id}" data-service="${account.service}" data-token="${account.accessToken}">
+                    <img src="assets/cloud-icon-${account.service}.png" alt="${account.service}">
+                    <div class="cloud-name">${escapeHtml(account.name)}</div>
+                    <div class="cloud-email">${escapeHtml(account.email)}</div>
+                </div>
+            `).join('');
+            
+            // Добавляем обработчики кликов
+            document.querySelectorAll('.cloud-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const service = card.dataset.service;
+                    alert(`Открытие ${service}\nФункционал файлового менеджера будет добавлен позже`);
+                });
+            });
+        }
+        
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        // === ОБРАБОТЧИКИ ===
+        document.getElementById('mainIcon').onclick = () => {
             window.location.href = 'aggregators.html';
+        };
+        
+        // Слушаем изменения в localStorage
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'nimbus_accounts') {
+                loadClouds();
+            }
         });
+        
+        // Загружаем при старте
+        loadClouds();
     </script>
 </body>
 </html>
