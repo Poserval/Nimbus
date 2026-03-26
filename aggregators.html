@@ -35,12 +35,13 @@
             position: relative;
             z-index: 1;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
             padding-top: 60px;
         }
 
-        /* Убираем все выделения при нажатии */
-        .aggregator-icon {
+        /* Стиль для верхней иконки (возврат на главный экран) */
+        .back-icon {
             width: 200px;
             height: auto;
             cursor: pointer;
@@ -48,27 +49,84 @@
             -webkit-tap-highlight-color: transparent;
             outline: none;
             user-select: none;
+            margin-bottom: 40px;
+        }
+
+        .back-icon:hover {
+            transform: scale(1.05);
+        }
+
+        /* Контейнер для иконок агрегаторов */
+        .icons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        /* Стиль для иконок агрегаторов (уменьшены в 2 раза: 100px вместо 200px) */
+        .aggregator-icon {
+            width: 100px;
+            height: auto;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+            user-select: none;
+            align-self: center;
         }
 
         .aggregator-icon:hover {
             transform: scale(1.05);
         }
 
-        /* Убираем выделение у родительского элемента */
+        /* Убираем выделение у всех элементов */
         .content * {
             -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Адаптивность для мобильных */
+        @media (max-width: 600px) {
+            .back-icon {
+                width: 150px;
+            }
+            .aggregator-icon {
+                width: 80px;
+            }
+            .icons-container {
+                gap: 25px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="content">
-        <img src="assets/cloud-icon1.png" alt="Aggregators" class="aggregator-icon" id="aggregatorIcon">
+        <!-- Иконка возврата на главный экран -->
+        <img src="assets/cloud-icon1.png" alt="Back" class="back-icon" id="backIcon">
+
+        <!-- Контейнер с 4 иконками агрегаторов -->
+        <div class="icons-container">
+            <img src="assets/cloud-icon1.png" alt="Aggregator 1" class="aggregator-icon" id="agg1">
+            <img src="assets/cloud-icon1.png" alt="Aggregator 2" class="aggregator-icon" id="agg2">
+            <img src="assets/cloud-icon1.png" alt="Aggregator 3" class="aggregator-icon" id="agg3">
+            <img src="assets/cloud-icon1.png" alt="Aggregator 4" class="aggregator-icon" id="agg4">
+        </div>
     </div>
 
     <script>
-        const aggregatorIcon = document.getElementById('aggregatorIcon');
-        aggregatorIcon.addEventListener('click', () => {
+        // Возврат на главный экран
+        const backIcon = document.getElementById('backIcon');
+        backIcon.addEventListener('click', () => {
             window.location.href = 'home.html';
+        });
+
+        // Обработчики для иконок агрегаторов (пока заглушки)
+        const aggregators = [agg1, agg2, agg3, agg4];
+        aggregators.forEach((agg, index) => {
+            agg.addEventListener('click', () => {
+                alert(`Агрегатор ${index + 1}\nФункционал будет добавлен позже`);
+            });
         });
     </script>
 </body>
