@@ -63,6 +63,20 @@
             .back-icon { width: 150px; }
             .aggregator-icon { width: 70px; }
         }
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 18px;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
@@ -79,17 +93,22 @@
             </div>
         </div>
     </div>
+    <div id="loading" style="display: none;" class="loading">Авторизация...</div>
 
     <script>
         // === НАСТРОЙКИ GOOGLE OAUTH ===
         const CLIENT_ID = '944030768816-3e8d7vrpgio1qgsfd4jgljevjldmin62.apps.googleusercontent.com';
         const REDIRECT_URI = encodeURIComponent('https://poserval.github.io/Nimbus/aggregators.html');
-        const AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/drive.readonly&access_type=offline`;
+        const AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/drive.readonly&access_type=offline&prompt=consent`;
         
-        // Публичный прокси (секрет хранится на сервере)
         const PROXY_URL = 'https://oauth-proxy.cyclic.app/token';
 
+        function showLoading() {
+            document.getElementById('loading').style.display = 'flex';
+        }
+
         async function exchangeCodeForToken(code) {
+            showLoading();
             try {
                 const response = await fetch(PROXY_URL, {
                     method: 'POST',
@@ -102,44 +121,36 @@
                         headers: { Authorization: `Bearer ${data.access_token}` }
                     });
                     const user = await userInfo.json();
-                    // Переходим в файловый менеджер с токеном и email
                     window.location.href = `storage.html?token=${data.access_token}&email=${encodeURIComponent(user.email)}`;
                 } else {
                     alert('Ошибка: ' + (data.error || 'не удалось получить токен'));
+                    document.getElementById('loading').style.display = 'none';
                 }
             } catch (err) {
-                alert('Ошибка соединения. Попробуйте позже.');
+                alert('Ошибка соединения: ' + err.message);
+                document.getElementById('loading').style.display = 'none';
             }
         }
 
         function startGoogleAuth() {
-            const authWindow = window.open(AUTH_URL, 'googleAuth', 'width=500,height=600');
-            const interval = setInterval(() => {
-                try {
-                    if (authWindow && authWindow.location.href.includes('aggregators.html')) {
-                        clearInterval(interval);
-                        const url = new URL(authWindow.location.href);
-                        const code = url.searchParams.get('code');
-                        if (code) {
-                            authWindow.close();
-                            exchangeCodeForToken(code);
-                        }
-                    }
-                } catch (e) {
-                    // cross-origin error, ignore
-                }
-                if (authWindow && authWindow.closed) {
-                    clearInterval(interval);
-                }
-            }, 500);
+            // Сохраняем, что начали авторизацию
+            sessionStorage.setItem('google_auth_started', 'true');
+            // Переходим на страницу авторизации Google
+            window.location.href = AUTH_URL;
         }
 
         function handleGoogleRedirect() {
             const urlParams = new URLSearchParams(window.location.search);
             const code = urlParams.get('code');
+            
             if (code) {
+                // Убираем code из URL
                 window.history.replaceState({}, document.title, window.location.pathname);
                 exchangeCodeForToken(code);
+            } else if (sessionStorage.getItem('google_auth_started')) {
+                // Если вернулись с авторизации, но без кода — ошибка
+                sessionStorage.removeItem('google_auth_started');
+                alert('Авторизация не завершена или отменена');
             }
         }
 
@@ -152,6 +163,7 @@
         document.getElementById('agg2').onclick = () => alert('Агрегатор 2 будет добавлен позже');
         document.getElementById('agg4').onclick = () => alert('Агрегатор 4 будет добавлен позже');
 
+        // Проверяем, не вернулись ли мы с code
         handleGoogleRedirect();
     </script>
 </body>
