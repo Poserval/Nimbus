@@ -96,12 +96,12 @@
     <div id="loading" style="display: none;" class="loading">Авторизация...</div>
 
     <script>
-        // === НАСТРОЙКИ GOOGLE OAUTH ===
         const CLIENT_ID = '944030768816-3e8d7vrpgio1qgsfd4jgljevjldmin62.apps.googleusercontent.com';
         const REDIRECT_URI = encodeURIComponent('https://poserval.github.io/Nimbus/aggregators.html');
         const AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/drive.file&access_type=offline&prompt=consent`;
         
-        const PROXY_URL = 'https://oauth-proxy.cyclic.app/token';
+        // НОВЫЙ РАБОЧИЙ ПРОКСИ
+        const PROXY_URL = 'https://nimbus-proxy.glitch.me/token';
 
         function showLoading() {
             document.getElementById('loading').style.display = 'flex';
@@ -150,7 +150,6 @@
             }
         }
 
-        // === ОБРАБОТЧИКИ ===
         document.getElementById('backIcon').onclick = () => {
             window.location.href = 'home.html';
         };
