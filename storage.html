@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Nimbus - Файлы</title>
+    <title>Nimbus - Файлы (Демо)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -68,132 +68,32 @@
         .file-name { font-size: 16px; font-weight: 500; }
         .file-size { font-size: 12px; color: #666; }
         .empty { text-align: center; padding: 40px; color: #666; }
-        .loading { text-align: center; padding: 40px; }
     </style>
 </head>
 <body>
     <div class="header">
         <button class="back-btn" id="backBtn">←</button>
-        <span class="title" id="headerTitle">Google Drive</span>
+        <span class="title" id="headerTitle">Демо: Google Drive</span>
         <button class="upload-btn" id="uploadBtn">📤 Загрузить</button>
         <button class="done-btn" id="doneBtn">Готово</button>
     </div>
     <div class="content">
         <input type="text" class="name-input" id="accountName" placeholder="Название аккаунта (например: Google рабочий)">
-        <div id="fileList" class="file-list">
-            <div class="loading">Загрузка файлов...</div>
-        </div>
-        <input type="file" id="fileInput" style="display: none;">
+        <div id="fileList" class="file-list"></div>
     </div>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const accessToken = urlParams.get('token');
-        const email = urlParams.get('email');
+        // Демо-данные
+        const demoFiles = [
+            { name: 'Отчет за март.pdf', size: 245, mimeType: 'application/pdf' },
+            { name: 'Фото отпуска.jpg', size: 1280, mimeType: 'image/jpeg' },
+            { name: 'Проект Nimbus.zip', size: 5120, mimeType: 'application/zip' },
+            { name: 'Презентация.pptx', size: 890, mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' },
+            { name: 'Документ.docx', size: 67, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }
+        ];
 
-        if (!accessToken) {
-            alert('Ошибка: токен не найден');
-            window.location.href = 'aggregators.html';
-        }
-
-        async function loadFiles() {
-            try {
-                const response = await fetch('https://www.googleapis.com/drive/v3/files?fields=files(id,name,size,mimeType)', {
-                    headers: { Authorization: `Bearer ${accessToken}` }
-                });
-                const data = await response.json();
-                const container = document.getElementById('fileList');
-                
-                if (!data.files || data.files.length === 0) {
-                    container.innerHTML = '<div class="empty">Файлы не найдены</div>';
-                    return;
-                }
-                
-                container.innerHTML = data.files.slice(0, 50).map(file => `
-                    <div class="file-item">
-                        <div class="file-icon">${file.mimeType.includes('folder') ? '📁' : '📄'}</div>
-                        <div class="file-info">
-                            <div class="file-name">${escapeHtml(file.name)}</div>
-                            <div class="file-size">${file.size ? Math.round(file.size/1024) + ' KB' : '—'}</div>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (err) {
-                document.getElementById('fileList').innerHTML = '<div class="empty">Ошибка загрузки файлов</div>';
-            }
-        }
-
-        async function uploadFile(file) {
-            const metadata = {
-                name: file.name,
-                mimeType: file.type
-            };
-            
-            const form = new FormData();
-            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            form.append('file', file);
-            
-            try {
-                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${accessToken}` },
-                    body: form
-                });
-                const result = await response.json();
-                if (result.id) {
-                    alert(`Файл "${file.name}" загружен!`);
-                    loadFiles(); // обновляем список
-                } else {
-                    alert('Ошибка загрузки');
-                }
-            } catch (err) {
-                alert('Ошибка: ' + err.message);
-            }
-        }
-
-        function escapeHtml(str) {
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
-
-        function saveAndGoHome() {
-            const name = document.getElementById('accountName').value.trim();
-            if (!name) {
-                alert('Введите название аккаунта');
-                return;
-            }
-            
-            const accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
-            accounts.push({
-                id: Date.now(),
-                service: 'google',
-                name: name,
-                accessToken: accessToken,
-                email: email
-            });
-            localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
-            window.location.href = 'home.html';
-        }
-
-        document.getElementById('backBtn').onclick = () => {
-            window.location.href = 'aggregators.html';
-        };
-        document.getElementById('doneBtn').onclick = saveAndGoHome;
-        document.getElementById('uploadBtn').onclick = () => {
-            document.getElementById('fileInput').click();
-        };
-        document.getElementById('fileInput').onchange = (e) => {
-            if (e.target.files.length) {
-                uploadFile(e.target.files[0]);
-                e.target.value = '';
-            }
-        };
-
-        loadFiles();
-    </script>
-</body>
-</html>
+        function loadDemoFiles() {
+            const container = document.getElementById('fileList');
+            container.innerHTML = demoFiles.map(file => `
+                <div class="file-item">
+                    <div class="file-icon">${file.mimeType.includes('image') ? '🖼️' : file.mimeType.includes('pdf') ? '📑' : file.mimeType.includes('zip') ? '📦
