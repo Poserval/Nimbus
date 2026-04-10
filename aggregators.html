@@ -99,7 +99,7 @@
         // === НАСТРОЙКИ GOOGLE OAUTH ===
         const CLIENT_ID = '944030768816-3e8d7vrpgio1qgsfd4jgljevjldmin62.apps.googleusercontent.com';
         const REDIRECT_URI = encodeURIComponent('https://poserval.github.io/Nimbus/aggregators.html');
-        const AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/drive.readonly&access_type=offline&prompt=consent`;
+        const AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/drive.file&access_type=offline&prompt=consent`;
         
         const PROXY_URL = 'https://oauth-proxy.cyclic.app/token';
 
@@ -133,9 +133,7 @@
         }
 
         function startGoogleAuth() {
-            // Сохраняем, что начали авторизацию
             sessionStorage.setItem('google_auth_started', 'true');
-            // Переходим на страницу авторизации Google
             window.location.href = AUTH_URL;
         }
 
@@ -144,11 +142,9 @@
             const code = urlParams.get('code');
             
             if (code) {
-                // Убираем code из URL
                 window.history.replaceState({}, document.title, window.location.pathname);
                 exchangeCodeForToken(code);
             } else if (sessionStorage.getItem('google_auth_started')) {
-                // Если вернулись с авторизации, но без кода — ошибка
                 sessionStorage.removeItem('google_auth_started');
                 alert('Авторизация не завершена или отменена');
             }
@@ -159,11 +155,12 @@
             window.location.href = 'home.html';
         };
         document.getElementById('googleIcon').onclick = startGoogleAuth;
-        document.getElementById('yandexIcon').onclick = () => alert('Яндекс Диск будет добавлен позже');
+        document.getElementById('yandexIcon').onclick = () => {
+            alert('Яндекс Диск появится в следующей версии. Следите за обновлениями!');
+        };
         document.getElementById('agg2').onclick = () => alert('Агрегатор 2 будет добавлен позже');
         document.getElementById('agg4').onclick = () => alert('Агрегатор 4 будет добавлен позже');
 
-        // Проверяем, не вернулись ли мы с code
         handleGoogleRedirect();
     </script>
 </body>
