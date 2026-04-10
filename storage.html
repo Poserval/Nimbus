@@ -96,4 +96,54 @@
             const container = document.getElementById('fileList');
             container.innerHTML = demoFiles.map(file => `
                 <div class="file-item">
-                    <div class="file-icon">${file.mimeType.includes('image') ? '🖼️' : file.mimeType.includes('pdf') ? '📑' : file.mimeType.includes('zip') ? '📦
+                    <div class="file-icon">${file.mimeType.includes('image') ? '🖼️' : file.mimeType.includes('pdf') ? '📑' : file.mimeType.includes('zip') ? '📦' : '📄'}</div>
+                    <div class="file-info">
+                        <div class="file-name">${escapeHtml(file.name)}</div>
+                        <div class="file-size">${Math.round(file.size)} KB</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        function saveAndGoHome() {
+            const name = document.getElementById('accountName').value.trim();
+            if (!name) {
+                alert('Введите название аккаунта');
+                return;
+            }
+            
+            // Сохраняем тестовый аккаунт
+            const accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+            accounts.push({
+                id: Date.now(),
+                service: 'google',
+                name: name,
+                accessToken: 'demo_token',
+                email: 'demo@example.com'
+            });
+            localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+            localStorage.setItem('nimbus_accounts_updated', Date.now().toString());
+            window.location.href = 'home.html';
+        }
+
+        document.getElementById('backBtn').onclick = () => {
+            window.location.href = 'aggregators.html';
+        };
+        document.getElementById('doneBtn').onclick = saveAndGoHome;
+        document.getElementById('uploadBtn').onclick = () => {
+            alert('В демо-режиме загрузка файлов недоступна. В боевой версии здесь будет загрузка на Google Drive.');
+        };
+
+        loadDemoFiles();
+    </script>
+</body>
+</html>
