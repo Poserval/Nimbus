@@ -63,20 +63,6 @@
             .back-icon { width: 150px; }
             .aggregator-icon { width: 70px; }
         }
-        .loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-size: 18px;
-            z-index: 1000;
-        }
     </style>
 </head>
 <body>
@@ -93,74 +79,21 @@
             </div>
         </div>
     </div>
-    <div id="loading" style="display: none;" class="loading">Авторизация...</div>
 
     <script>
-        const CLIENT_ID = '944030768816-3e8d7vrpgio1qgsfd4jgljevjldmin62.apps.googleusercontent.com';
-        const REDIRECT_URI = encodeURIComponent('https://poserval.github.io/Nimbus/aggregators.html');
-        const AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/drive.file&access_type=offline&prompt=consent`;
-        
-        // НОВЫЙ РАБОЧИЙ ПРОКСИ
-        const PROXY_URL = 'https://nimbus-proxy.glitch.me/token';
-
-        function showLoading() {
-            document.getElementById('loading').style.display = 'flex';
-        }
-
-        async function exchangeCodeForToken(code) {
-            showLoading();
-            try {
-                const response = await fetch(PROXY_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code, provider: 'google' })
-                });
-                const data = await response.json();
-                if (data.access_token) {
-                    const userInfo = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
-                        headers: { Authorization: `Bearer ${data.access_token}` }
-                    });
-                    const user = await userInfo.json();
-                    window.location.href = `storage.html?token=${data.access_token}&email=${encodeURIComponent(user.email)}`;
-                } else {
-                    alert('Ошибка: ' + (data.error || 'не удалось получить токен'));
-                    document.getElementById('loading').style.display = 'none';
-                }
-            } catch (err) {
-                alert('Ошибка соединения: ' + err.message);
-                document.getElementById('loading').style.display = 'none';
-            }
-        }
-
-        function startGoogleAuth() {
-            sessionStorage.setItem('google_auth_started', 'true');
-            window.location.href = AUTH_URL;
-        }
-
-        function handleGoogleRedirect() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            
-            if (code) {
-                window.history.replaceState({}, document.title, window.location.pathname);
-                exchangeCodeForToken(code);
-            } else if (sessionStorage.getItem('google_auth_started')) {
-                sessionStorage.removeItem('google_auth_started');
-                alert('Авторизация не завершена или отменена');
-            }
-        }
-
+        // ДЕМО-РЕЖИМ: переход в storage.html с тестовыми данными
         document.getElementById('backIcon').onclick = () => {
             window.location.href = 'home.html';
         };
-        document.getElementById('googleIcon').onclick = startGoogleAuth;
+        document.getElementById('googleIcon').onclick = () => {
+            // Передаём параметр demo=1, чтобы storage.html понял, что это тестовый режим
+            window.location.href = 'storage.html?demo=1&service=google&email=demo@example.com';
+        };
         document.getElementById('yandexIcon').onclick = () => {
-            alert('Яндекс Диск появится в следующей версии. Следите за обновлениями!');
+            alert('Яндекс Диск появится в следующей версии');
         };
         document.getElementById('agg2').onclick = () => alert('Агрегатор 2 будет добавлен позже');
         document.getElementById('agg4').onclick = () => alert('Агрегатор 4 будет добавлен позже');
-
-        handleGoogleRedirect();
     </script>
 </body>
 </html>
