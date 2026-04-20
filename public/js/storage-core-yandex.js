@@ -1398,7 +1398,7 @@ async function downloadFile(fileId, fileName) {
     }
 }
 
-
+async function downloadFileAsBlob(fileId) {
     const item = allItems.find(i => i.id === fileId);
     if (!item) throw new Error('Файл не найден');
     
