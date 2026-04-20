@@ -27,13 +27,17 @@ app.get('/', (req, res) => {
     res.json({ status: 'ok', message: 'Nimbus proxy server is running' });
 });
 
-// ========== МАРШРУТ ДЛЯ ПРОВЕРКИ /token ==========
+// ========== МАРШРУТ ДЛЯ GET /token (для проверки) ==========
 app.get('/token', (req, res) => {
-    res.json({ error: 'No code provided', message: 'Use POST request with code parameter' });
+    res.json({ 
+        status: 'ok', 
+        message: 'Token endpoint is ready. Use POST request with code parameter.' 
+    });
 });
 
 // ========== ОСНОВНОЙ ЭНДПОИНТ ДЛЯ OAuth ==========
 app.post('/token', async (req, res) => {
+
     const { code, service, refresh_token, grant_type } = req.body;
     const redirect_uri = getRedirectUri(req);
     
