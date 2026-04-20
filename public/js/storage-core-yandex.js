@@ -1398,7 +1398,7 @@ async function downloadFile(fileId, fileName) {
     }
 }
 
-async function downloadFileAsBlob(fileId) {
+
     const item = allItems.find(i => i.id === fileId);
     if (!item) throw new Error('Файл не найден');
     
@@ -1407,12 +1407,22 @@ async function downloadFileAsBlob(fileId) {
         path = 'disk:' + path;
     }
     
+    // Получаем прямую ссылку на скачивание от Яндекс
     const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(path)}`, {
         headers: { 'Authorization': `OAuth ${accessToken}` }
     });
     const data = await response.json();
-    const downloadResponse = await fetch(data.href);
-    return await downloadResponse.blob();
+    const directUrl = data.href;
+    
+    // Скачиваем через свой прокси (обходим CORS)
+    const proxyUrl = `/fetch-file?url=${encodeURIComponent(directUrl)}`;
+    const proxyResponse = await fetch(proxyUrl);
+    
+    if (!proxyResponse.ok) {
+        throw new Error(`Failed to download via proxy: ${proxyResponse.status}`);
+    }
+    
+    return await proxyResponse.blob();
 }
 
 async function moveToTrash(itemId) {
