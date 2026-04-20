@@ -2,32 +2,42 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
+
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-// Конфигурация из переменных окружения
+// Конфигурация
 const GOOGLE_CLIENT_ID = '944030768816-dknh5820s2knnbnrlde52q4hg2evcl2u.apps.googleusercontent.com';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const YANDEX_CLIENT_ID = '2dad4c5424324e1c8a7240b3d2a0f6c0';
 const YANDEX_CLIENT_SECRET = process.env.YANDEX_CLIENT_SECRET;
-const PORT = process.env.PORT || 3000;
 
-// Определяем redirect_uri в зависимости от окружения
+// Динамический redirect_uri
 const getRedirectUri = (req) => {
     const host = req.get('host');
     const protocol = req.protocol;
     return `${protocol}://${host}/index.html`;
 };
 
-// Эндпоинт для обмена кода на токен
+// ========== ТЕСТОВЫЙ МАРШРУТ (проверка что сервер жив) ==========
+app.get('/', (req, res) => {
+    res.json({ status: 'ok', message: 'Nimbus proxy server is running' });
+});
+
+// ========== МАРШРУТ ДЛЯ ПРОВЕРКИ /token ==========
+app.get('/token', (req, res) => {
+    res.json({ error: 'No code provided', message: 'Use POST request with code parameter' });
+});
+
+// ========== ОСНОВНОЙ ЭНДПОИНТ ДЛЯ OAuth ==========
 app.post('/token', async (req, res) => {
     const { code, service, refresh_token, grant_type } = req.body;
     const redirect_uri = getRedirectUri(req);
     
     console.log('Request received:', { service, grant_type, codeExists: !!code, refreshExists: !!refresh_token });
-    console.log('Redirect URI:', redirect_uri);
     
     // Обновление токена (REFRESH)
     if (grant_type === 'refresh_token' && refresh_token) {
@@ -41,11 +51,9 @@ app.post('/token', async (req, res) => {
                         grant_type: 'refresh_token'
                     }
                 });
-                console.log('Google token refresh successful');
                 return res.json(response.data);
             } catch (error) {
-                console.error('Google refresh failed:', error.response?.data || error.message);
-                return res.status(500).json({ error: 'Refresh failed', details: error.response?.data });
+                return res.status(500).json({ error: 'Refresh failed' });
             }
         } else if (service === 'yandex') {
             try {
@@ -58,22 +66,18 @@ app.post('/token', async (req, res) => {
                 const response = await axios.post('https://oauth.yandex.ru/token', params, {
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 });
-                console.log('Yandex token refresh successful');
                 return res.json(response.data);
             } catch (error) {
-                console.error('Yandex refresh failed:', error.response?.data || error.message);
-                return res.status(500).json({ error: 'Refresh failed', details: error.response?.data });
+                return res.status(500).json({ error: 'Refresh failed' });
             }
         }
     }
     
-    // Обмен кода на токен (AUTHORIZATION)
+    // Обмен кода на токен
     if (!code) {
-        console.log('No code provided');
         return res.status(400).json({ error: 'No code provided' });
     }
     
-    // Google
     if (service === 'google') {
         try {
             const response = await axios.post('https://oauth2.googleapis.com/token', null, {
@@ -85,18 +89,12 @@ app.post('/token', async (req, res) => {
                     grant_type: 'authorization_code'
                 }
             });
-            console.log('Google token exchange successful');
             return res.json(response.data);
         } catch (error) {
-            console.error('Google token exchange failed:', error.response?.data || error.message);
-            return res.status(500).json({ 
-                error: 'Token exchange failed', 
-                details: error.response?.data 
-            });
+            return res.status(500).json({ error: 'Token exchange failed' });
         }
     }
     
-    // Яндекс
     if (service === 'yandex') {
         try {
             const params = new URLSearchParams();
@@ -108,52 +106,16 @@ app.post('/token', async (req, res) => {
             const response = await axios.post('https://oauth.yandex.ru/token', params, {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             });
-            console.log('Yandex token exchange successful');
             return res.json(response.data);
         } catch (error) {
-            console.error('Yandex token exchange failed:', error.response?.data || error.message);
-            return res.status(500).json({ 
-                error: 'Token exchange failed', 
-                details: error.response?.data 
-            });
+            return res.status(500).json({ error: 'Token exchange failed' });
         }
     }
     
-    // Если сервис не указан (старый способ для Google)
-    if (!service) {
-        try {
-            const response = await axios.post('https://oauth2.googleapis.com/token', null, {
-                params: {
-                    code: code,
-                    client_id: GOOGLE_CLIENT_ID,
-                    client_secret: GOOGLE_CLIENT_SECRET,
-                    redirect_uri: redirect_uri,
-                    grant_type: 'authorization_code'
-                }
-            });
-            console.log('Google token exchange successful (legacy mode)');
-            return res.json(response.data);
-        } catch (error) {
-            console.error('Google token exchange failed:', error.response?.data || error.message);
-            return res.status(500).json({ 
-                error: 'Token exchange failed', 
-                details: error.response?.data 
-            });
-        }
-    }
-    
-    console.log('Unknown service:', service);
-    return res.status(400).json({ error: 'Unknown service', service });
+    return res.status(400).json({ error: 'Unknown service' });
 });
 
-app.listen(PORT, () => {
-    console.log(`Nimbus server running at http://localhost:${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log('Google Drive: configured');
-    console.log('Yandex Disk: configured');
-});
-
-// Прокси для загрузки файлов по ссылке (обходит CORS)
+// ========== ПРОКСИ ДЛЯ ЗАГРУЗКИ ФАЙЛОВ ПО ССЫЛКЕ ==========
 app.get('/fetch-file', async (req, res) => {
     const fileUrl = req.query.url;
     
@@ -173,7 +135,6 @@ app.get('/fetch-file', async (req, res) => {
             }
         });
         
-        // Передаём заголовки
         res.setHeader('Content-Disposition', response.headers['content-disposition'] || `attachment; filename="downloaded_file"`);
         res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
         res.setHeader('Access-Control-Allow-Origin', '*');
@@ -184,4 +145,8 @@ app.get('/fetch-file', async (req, res) => {
         console.error('[Fetch] Ошибка:', error.message);
         res.status(500).json({ error: 'Failed to fetch file', details: error.message });
     }
+});
+
+app.listen(PORT, () => {
+    console.log(`Nimbus proxy server running at http://localhost:${PORT}`);
 });
