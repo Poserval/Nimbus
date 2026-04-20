@@ -177,7 +177,7 @@ async function refreshTargetToken(service, oldToken) {
 
 // Универсальная загрузка файла как Blob из исходного облака
 async function downloadSourceFileAsBlob(sourceService, sourceToken, itemId, itemPath) {
-    console.log('downloadSourceFileAsBlob called:', { sourceService, sourceToken, itemId, itemPath });
+    console.log('[downloadSourceFileAsBlob] Called:', { sourceService, itemId, itemPath });
     
     if (sourceService === 'google') {
         let response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}?alt=media`, {
@@ -197,16 +197,18 @@ async function downloadSourceFileAsBlob(sourceService, sourceToken, itemId, item
         }
         
         return await response.blob();
+        
     } else if (sourceService === 'yandex') {
-        let response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(itemPath)}`, {
+        // ПОЛУЧАЕМ ССЫЛКУ НА СКАЧИВАНИЕ
+        let downloadUrlResponse = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(itemPath)}`, {
             headers: { 'Authorization': `OAuth ${sourceToken}` }
         });
         
-        if (response.status === 401) {
+        if (downloadUrlResponse.status === 401) {
             const newToken = await refreshSourceToken('yandex', sourceToken);
             if (newToken) {
                 sourceToken = newToken;
-                response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(itemPath)}`, {
+                downloadUrlResponse = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(itemPath)}`, {
                     headers: { 'Authorization': `OAuth ${sourceToken}` }
                 });
             } else {
@@ -214,11 +216,20 @@ async function downloadSourceFileAsBlob(sourceService, sourceToken, itemId, item
             }
         }
         
-        const data = await response.json();
-        const downloadResponse = await fetch(data.href);
-        return await downloadResponse.blob();
+        const downloadData = await downloadUrlResponse.json();
+        const directUrl = downloadData.href;
+        
+        // СКАЧИВАЕМ ФАЙЛ ЧЕРЕЗ ПРОКСИ (обходим CORS)
+        const proxyUrl = `/fetch-file?url=${encodeURIComponent(directUrl)}`;
+        const proxyResponse = await fetch(proxyUrl);
+        
+        if (!proxyResponse.ok) {
+            throw new Error(`Failed to download via proxy: ${proxyResponse.status}`);
+        }
+        
+        return await proxyResponse.blob();
+        
     } else {
-        console.error('Unknown source service:', sourceService);
         throw new Error('Unknown source service');
     }
 }
