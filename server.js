@@ -1,17 +1,22 @@
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Мидлвары
 app.use(express.json());
+app.use(express.static('public')); // ← РАЗДАЁМ ФРОНТЕНД из папки public
 
+// Конфигурация OAuth
 const GOOGLE_CLIENT_ID = '944030768816-dknh5820s2knnbnrlde52q4hg2evcl2u.apps.googleusercontent.com';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const YANDEX_CLIENT_ID = '2dad4c5424324e1c8a7240b3d2a0f6c0';
 const YANDEX_CLIENT_SECRET = process.env.YANDEX_CLIENT_SECRET;
 
+// Вспомогательная функция для Redirect URI
 const getRedirectUri = (req) => {
     const host = req.get('host');
     const protocol = req.protocol;
@@ -28,15 +33,15 @@ app.get('/token', (req, res) => {
     res.json({ error: 'No code provided', message: 'Use POST request with code parameter' });
 });
 
-// ========== POST /token (основной) ==========
+// ========== POST /token (основной OAuth) ==========
 app.post('/token', async (req, res) => {
     const { code, service, refresh_token, grant_type } = req.body;
     const redirect_uri = getRedirectUri(req);
 
     console.log(`[Token] Request received. Service: ${service}, Grant type: ${grant_type}`);
 
+    // Обновление токена (refresh)
     if (grant_type === 'refresh_token' && refresh_token) {
-        console.log(`[Token] Refreshing token for ${service}...`);
         if (service === 'google') {
             try {
                 const response = await axios.post('https://oauth2.googleapis.com/token', null, {
@@ -68,6 +73,7 @@ app.post('/token', async (req, res) => {
         }
     }
 
+    // Обмен кода на токен (authorization)
     if (!code) {
         return res.status(400).json({ error: 'No code provided' });
     }
@@ -108,7 +114,7 @@ app.post('/token', async (req, res) => {
     return res.status(400).json({ error: 'Unknown service' });
 });
 
-// ========== ПРОКСИ ДЛЯ ЗАГРУЗКИ ФАЙЛОВ ==========
+// ========== ПРОКСИ ДЛЯ ЗАГРУЗКИ ФАЙЛОВ ПО ССЫЛКЕ ==========
 app.get('/fetch-file', async (req, res) => {
     const fileUrl = req.query.url;
     if (!fileUrl) {
@@ -132,6 +138,9 @@ app.get('/fetch-file', async (req, res) => {
     }
 });
 
+// Запуск сервера
 app.listen(PORT, () => {
-    console.log(`✅ Nimbus proxy server is running on port ${PORT}`);
+    console.log(`✅ Nimbus server running on port ${PORT}`);
+    console.log(`   Frontend: https://localhost:${PORT}/index.html`);
+    console.log(`   Proxy: https://localhost:${PORT}/token`);
 });
