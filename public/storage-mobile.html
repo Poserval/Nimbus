@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Nimbus - Мобильный менеджер</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f5f5f5; min-height: 100vh; }
+
+        .mobile-header { background: #1a237e; padding: 12px; position: sticky; top: 0; z-index: 100; }
+        .header-row-1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .back-btn { width: 40px; height: 40px; background: rgba(255,255,255,0.2); border: none; border-radius: 50%; color: white; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .header-title { font-size: 18px; font-weight: bold; color: white; text-align: center; flex: 1; }
+        .trash-badge { background: #f44336; color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; display: none; }
+
+        .header-row-2 { display: flex; align-items: center; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+        .limit-control { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 30px; }
+        .limit-label { font-size: 12px; color: rgba(255,255,255,0.8); }
+        .limit-value { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 14px; width: 55px; text-align: center; padding: 4px; border-radius: 20px; }
+        .limit-arrow-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 28px; height: 28px; border-radius: 14px; cursor: pointer; font-size: 16px; }
+        .limit-unit { font-size: 12px; cursor: pointer; color: rgba(255,255,255,0.8); font-weight: bold; }
+        .limit-lock-icon { width: 18px; height: 18px; cursor: pointer; margin-left: 4px; }
+
+        .header-row-3 { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 12px; flex-wrap: wrap; }
+        .used-control, .percent-control { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 30px; }
+        .used-label, .percent-label { font-size: 10px; color: rgba(255,255,255,0.7); }
+        .used-value, .percent-value { font-size: 13px; font-weight: bold; color: white; }
+
+        .header-row-4 { overflow-x: auto; overflow-y: hidden; white-space: nowrap; -webkit-overflow-scrolling: touch; margin: 0 -12px; padding: 0 12px 5px 12px; }
+        .actions-container { display: inline-flex; gap: 8px; }
+        .action-btn { width: 44px; height: 44px; background: rgba(255,255,255,0.2); border: none; border-radius: 22px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .action-btn img { width: 24px; height: 24px; }
+        .action-btn.disabled { opacity: 0.4; pointer-events: none; }
+        .upload-btn, .folder-btn, .trash-btn { background: rgba(76, 175, 80, 0.8); }
+        .header-row-4::-webkit-scrollbar { height: 3px; }
+        .header-row-4::-webkit-scrollbar-track { background: rgba(255,255,255,0.2); border-radius: 3px; }
+        .header-row-4::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.6); border-radius: 3px; }
+
+        .sort-bar { padding: 8px 12px; background: #f5f5f5; border-bottom: 1px solid #e0e0e0; position: sticky; top: 148px; z-index: 99; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .sort-select { flex: 1; padding: 10px; border-radius: 30px; border: 1px solid #ddd; background: white; font-size: 13px; }
+        .view-toggle { display: flex; gap: 5px; }
+        .view-btn { padding: 8px 12px; border-radius: 30px; border: 1px solid #ddd; background: white; cursor: pointer; font-size: 16px; }
+        .view-btn.active { background: #1a237e; color: white; border-color: #1a237e; }
+
+        .top-bar { padding: 12px; background: #f5f5f5; position: sticky; top: 195px; z-index: 99; }
+        .search-box { width: 100%; padding: 10px 15px; border: 1px solid #ddd; border-radius: 30px; font-size: 14px; margin-bottom: 8px; background: white; }
+        .import-link-container { display: flex; gap: 8px; width: 100%; }
+        .import-link-input { flex: 1; padding: 10px 12px; border: 1px solid #ddd; border-radius: 30px; font-size: 13px; background: white; }
+        .import-link-btn { background: #4caf50; color: white; border: none; padding: 0 16px; border-radius: 30px; cursor: pointer; font-size: 13px; font-weight: bold; }
+
+        .breadcrumb-container { padding: 8px 12px; background: #f5f5f5; overflow-x: auto; white-space: nowrap; border-bottom: 1px solid #e0e0e0; position: sticky; top: 270px; z-index: 98; font-size: 12px; }
+        .breadcrumb-item { color: #1a237e; cursor: pointer; }
+        .breadcrumb-separator { color: #999; margin: 0 4px; }
+        .breadcrumb-current { color: #333; font-weight: 500; }
+
+        .content { padding: 12px; height: calc(100vh - 330px); overflow-y: auto; }
+        .file-list { background: white; border-radius: 16px; overflow: hidden; }
+        .file-list-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; }
+        .file-check input { width: 20px; height: 20px; cursor: pointer; }
+        .file-icon { font-size: 32px; }
+        .file-info { flex: 1; }
+        .file-name { font-size: 14px; font-weight: 500; color: #1a237e; }
+        .file-size, .file-date { font-size: 10px; color: #666; margin-top: 2px; }
+
+        .file-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .file-grid-item { background: white; border-radius: 16px; padding: 12px; text-align: center; position: relative; }
+        .file-grid-item .file-check { position: absolute; top: 6px; left: 6px; }
+        .file-grid-item .file-icon { font-size: 40px; margin: 8px 0; }
+        .file-grid-item .file-name { font-size: 12px; font-weight: 500; word-break: break-word; }
+        .file-grid-item .file-size { font-size: 10px; }
+
+        .progress-container { height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden; margin-top: 6px; }
+        .progress-bar { height: 100%; background: #4caf50; width: 0%; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center; }
+        .modal-content { background: white; border-radius: 20px; width: 90%; max-width: 340px; padding: 20px; text-align: center; }
+        .modal-content h3 { margin-bottom: 12px; color: #1a237e; font-size: 18px; }
+        .modal-content input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 25px; margin: 10px 0; }
+        .modal-content button { background: #1a237e; color: white; border: none; padding: 8px 18px; border-radius: 25px; margin: 4px; cursor: pointer; }
+        .modal-content button.cancel { background: #999; }
+
+        .folder-modal-content { background: white; border-radius: 20px; width: 90%; max-width: 400px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
+        .folder-modal-header { padding: 15px; background: #1a237e; color: white; text-align: center; font-weight: bold; }
+        .folder-modal-body { flex: 1; overflow-y: auto; padding: 10px; max-height: 50vh; }
+        .folder-modal-footer { padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        .folder-modal-footer button { flex: 1; padding: 10px; border-radius: 25px; border: none; cursor: pointer; }
+        .folder-modal-footer .confirm { background: #1a237e; color: white; }
+        .folder-modal-footer .cancel { background: #999; color: white; }
+
+        #globalProgressContainer { position: sticky; top: 310px; z-index: 97; padding: 0 12px; }
+        .global-progress { background: #e8eaf6; padding: 10px; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+
+        .folder-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .folder-icon { font-size: 24px; }
+        .folder-name { flex: 1; text-align: left; }
+        .new-folder-input { display: flex; gap: 10px; padding: 12px; border-bottom: 1px solid #eee; }
+        .new-folder-input input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; }
+        .new-folder-input button { background: #1a237e; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; }
+        .share-cloud-item { display: flex; align-items: center; gap: 15px; padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="mobile-header">
+        <div class="header-row-1">
+            <button class="back-btn" id="backBtn">←</button>
+            <span class="header-title" id="cloudTitle">Облако</span>
+            <span id="trashBadge" class="trash-badge">Корзина</span>
+        </div>
+        <div class="header-row-2">
+            <div class="limit-control">
+                <span class="limit-label">Лимит:</span>
+                <input type="number" id="limitInput" class="limit-value" value="15" step="1">
+                <span id="limitUnit" class="limit-unit">ГБ</span>
+                <button class="limit-arrow-btn" id="limitMinus">−</button>
+                <button class="limit-arrow-btn" id="limitPlus">+</button>
+                <img id="limitLockBtn" src="assets/icon-lock.png" class="limit-lock-icon">
+            </div>
+        </div>
+        <div class="header-row-3">
+            <div class="used-control"><span class="used-label">Исп</span><span class="used-value" id="usedValue">—</span></div>
+            <div class="percent-control"><span class="percent-label">Запол</span><span class="percent-value" id="percentValue">—%</span></div>
+        </div>
+        <div class="header-row-4"><div class="actions-container" id="actionsContainer"></div></div>
+    </div>
+
+    <div class="sort-bar">
+        <select id="sortSelect" class="sort-select">
+            <option value="name_asc">📁 Имя (А→Я)</option>
+            <option value="name_desc">📁 Имя (Я→А)</option>
+            <option value="date_desc">📅 Новые сначала</option>
+            <option value="date_asc">📅 Старые сначала</option>
+            <option value="size_desc">📊 Большие сначала</option>
+            <option value="size_asc">📊 Маленькие сначала</option>
+        </select>
+        <div class="view-toggle">
+            <button class="view-btn" data-view="list" id="viewListBtn">📋</button>
+            <button class="view-btn" data-view="grid" id="viewGridBtn">⊞</button>
+        </div>
+    </div>
+
+    <div class="top-bar">
+        <input type="text" class="search-box" id="searchInput" placeholder="Поиск файлов...">
+        <div class="import-link-container">
+            <input type="text" id="importLinkInput" class="import-link-input" placeholder="Вставить ссылку на файл...">
+            <button id="importFileBtn" class="import-link-btn">📥 Получить</button>
+        </div>
+    </div>
+
+    <div class="breadcrumb-container" id="breadcrumbContainer"></div>
+    <div id="globalProgressContainer"></div>
+
+    <div class="content"><div id="filesContainer"></div><input type="file" id="fileInput" style="display:none"></div>
+
+    <!-- Модалки -->
+    <div id="propertiesModal" class="modal"><div class="modal-content"><h3>Свойства</h3><p><strong>Имя:</strong> <span id="propName"></span></p><p><strong>Размер:</strong> <span id="propSize"></span></p><button id="closeModalBtn">Закрыть</button></div></div>
+    <div id="shareCloudModal" class="modal"><div class="modal-content"><h3>Выберите облако для перемещения</h3><div id="shareCloudsList"></div><button id="cancelShareBtn" class="cancel">Отмена</button></div></div>
+    <div id="folderSelectModal" class="modal"><div class="folder-modal-content"><div class="folder-modal-header">Выберите папку</div><div class="folder-modal-body" id="folderSelectBody"></div><div class="folder-modal-footer"><button id="folderSelectConfirmBtn" class="confirm">Переместить сюда</button><button id="folderSelectCancelBtn" class="cancel">Отмена</button></div></div></div>
+    <div id="createFolderModal" class="modal"><div class="modal-content"><h3>Новая папка</h3><input type="text" id="newFolderName" placeholder="Название"><button id="createFolderConfirmBtn">Создать</button><button id="createFolderCancelBtn" class="cancel">Отмена</button></div></div>
+    <div id="archiveMenuModal" class="modal"><div class="modal-content"><h3>Архивировать</h3><div id="archiveMenuList"></div><button id="archiveMenuCancelBtn" class="cancel">Отмена</button></div></div>
+    <div id="trashActionModal" class="modal"><div class="modal-content"><h3>Действия с корзиной</h3><div id="trashActionList"></div><button id="trashActionCancelBtn" class="cancel">Отмена</button></div></div>
+    <div id="moveInsideModal" class="modal"><div class="folder-modal-content"><div class="folder-modal-header">Переместить в папку</div><div class="folder-modal-body" id="moveInsideBody"></div><div class="folder-modal-footer"><button id="moveInsideConfirmBtn" class="confirm">Переместить сюда</button><button id="moveInsideCancelBtn" class="cancel">Отмена</button></div></div></div>
+
+    <script>
+        // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
+        let cloudType = 'google';
+        let accessToken = null;
+        let email = null;
+        let allItems = [];
+        let currentFolderId = null;
+        let folderPath = [];
+        let selectedFiles = new Set();
+        let currentView = 'list';
+        let usedBytes = 0;
+        let limitGB = 15;
+        let isLimitLocked = false;
+        let limitUnit = 'GB';
+        let isTrashMode = false;
+        let trashItems = [];
+        
+        let pendingMoveTarget = null;
+        let pendingMoveTargetToken = null;
+        let pendingMoveItemId = null;
+        let pendingMoveItemName = null;
+        let pendingMoveItemIsFolder = false;
+        let pendingMoveItemPath = null;
+        let pendingMoveFolderId = null;
+        let pendingMoveSourceService = null;
+        
+        let moveInsideItems = [];
+        let moveInsideTargetFolderId = null;
+
+        function getFileIcon(item) {
+            const isFolder = item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir';
+            if (isFolder) return '📁';
+            const ext = item.name.split('.').pop().toLowerCase();
+            if (['jpg','jpeg','png','gif','bmp','webp','svg','ico'].includes(ext)) return '🖼️';
+            if (['mp4','avi','mkv','mov','wmv','flv','webm','m4v'].includes(ext)) return '🎬';
+            if (['mp3','wav','flac','aac','ogg','m4a','opus'].includes(ext)) return '🎵';
+            if (ext === 'pdf') return '📑';
+            if (['doc','docx','rtf','odt'].includes(ext)) return '📝';
+            if (['xls','xlsx','csv','ods'].includes(ext)) return '📊';
+            if (['ppt','pptx','odp'].includes(ext)) return '📽️';
+            if (['zip','rar','7z','tar','gz'].includes(ext)) return '📦';
+            return '📄';
+        }
+
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
+        const urlParams = new URLSearchParams(window.location.search);
+        cloudType = urlParams.get('cloud') || 'google';
+        accessToken = urlParams.get('token');
+        email = urlParams.get('email');
+
+        if (!accessToken) {
+            alert('Ошибка: токен не найден');
+            window.location.href = 'index.html';
+        }
+
+        document.getElementById('cloudTitle').textContent = cloudType === 'google' ? 'Google Drive' : 'Яндекс.Диск';
+        currentFolderId = cloudType === 'google' ? 'root' : '/';
+        folderPath = [{ id: currentFolderId, name: 'Корень' }];
+
+        const savedLimit = localStorage.getItem(`limit_${email}`);
+        if (savedLimit) limitGB = parseFloat(savedLimit);
+        document.getElementById('limitInput').value = limitGB;
+
+        const actions = [
+            { id: 'renameBtn', title: 'Переименовать', img: 'assets/button/button-rename.png' },
+            { id: 'copyBtn', title: 'Копировать', img: 'assets/button/button-copy.png' },
+            { id: 'printBtn', title: 'Печать', img: 'assets/button/button-print.png' },
+            { id: 'linkBtn', title: 'Ссылка', img: 'assets/button/button-link.png' },
+            { id: 'shareBtn', title: 'Поделиться', img: 'assets/button/button-send.png' },
+            { id: 'archiveBtn', title: 'Архивировать', img: 'assets/button/button-archive.png' },
+            { id: 'saveBtn', title: 'Сохранить', img: 'assets/button/button-save.png' },
+            { id: 'uploadBtn', title: 'Загрузить', img: 'assets/button/button-download.png', className: 'upload-btn' },
+            { id: 'folderBtn', title: 'Переместить', img: 'assets/button/button-move.png', className: 'folder-btn' },
+            { id: 'trashBtn', title: 'Корзина', img: 'assets/button/button-trash.png', className: 'trash-btn' }
+        ];
+        const actionsContainer = document.getElementById('actionsContainer');
+        actions.forEach(action => {
+            const btn = document.createElement('button');
+            btn.id = action.id;
+            btn.className = `action-btn ${action.className || ''}`;
+            btn.title = action.title;
+            const img = document.createElement('img');
+            img.src = action.img;
+            btn.appendChild(img);
+            actionsContainer.appendChild(btn);
+        });
+
+        // ========== API ВЫЗОВЫ ==========
+        async function googleGetItems(folderId) {
+            let all = [], pageToken = '';
+            while (true) {
+                let url = `https://www.googleapis.com/drive/v3/files?fields=files(id,name,size,mimeType,createdTime,modifiedTime)&pageSize=1000&q=trashed=false`;
+                if (folderId !== 'root') url += ` and '${folderId}' in parents`;
+                else url += ` and 'root' in parents`;
+                if (pageToken) url += `&pageToken=${pageToken}`;
+                const response = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                if (response.status === 401) { await refreshToken(); continue; }
+                const data = await response.json();
+                if (data.files) all = all.concat(data.files);
+                if (data.nextPageToken) pageToken = data.nextPageToken;
+                else break;
+            }
+            return all;
+        }
+
+        async function yandexGetItems(folderPath) {
+            let all = [], limit = 100, offset = 0;
+            let cleanPath = folderPath === '/' ? '/' : folderPath;
+            while (true) {
+                let url = `https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(cleanPath)}&limit=${limit}&offset=${offset}&fields=_embedded.items.name,_embedded.items.path,_embedded.items.created,_embedded.items.modified,_embedded.items.size,_embedded.items.type,_embedded.items.resource_id`;
+                const response = await fetch(url, { headers: { 'Authorization': `OAuth ${accessToken}` } });
+                if (response.status === 401) { await refreshToken(); continue; }
+                const data = await response.json();
+                if (data._embedded && data._embedded.items) {
+                    all.push(...data._embedded.items.map(item => ({
+                        id: item.resource_id, name: item.name, size: item.size || 0,
+                        mimeType: item.type === 'dir' ? 'application/vnd.yandex.folder' : 'application/octet-stream',
+                        createdTime: item.created, modifiedTime: item.modified, path: item.path, type: item.type
+                    })));
+                }
+                if (data._embedded && data._embedded.items.length === limit) offset += limit;
+                else break;
+            }
+            return all;
+        }
+
+        async function googleGetTrashItems() {
+            let all = [], pageToken = '';
+            while (true) {
+                let url = `https://www.googleapis.com/drive/v3/files?fields=files(id,name,size,mimeType,createdTime,modifiedTime,parents)&pageSize=1000&q=trashed=true`;
+                if (pageToken) url += `&pageToken=${pageToken}`;
+                const response = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                if (response.status === 401) { await refreshToken(); continue; }
+                const data = await response.json();
+                if (data.files) all = all.concat(data.files);
+                if (data.nextPageToken) pageToken = data.nextPageToken;
+                else break;
+            }
+            return all;
+        }
+
+        async function yandexGetTrashItems() {
+            let all = [];
+            let limit = 100;
+            let offset = 0;
+            try {
+                while (true) {
+                    let url = `https://cloud-api.yandex.net/v1/disk/trash/resources?limit=${limit}&offset=${offset}`;
+                    const response = await fetch(url, { headers: { 'Authorization': `OAuth ${accessToken}` } });
+                    
+                    if (response.status === 401) { 
+                        await refreshToken(); 
+                        continue; 
+                    }
+                    
+                    if (!response.ok) {
+                        console.error('Trash API error:', response.status);
+                        break;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data._embedded && data._embedded.items && data._embedded.items.length) {
+                        for (const item of data._embedded.items) {
+                            all.push({
+                                id: item.resource_id,
+                                name: item.name,
+                                size: item.size || 0,
+                                mimeType: item.type === 'dir' ? 'application/vnd.yandex.folder' : 'application/octet-stream',
+                                createdTime: item.created,
+                                modifiedTime: item.modified,
+                                path: item.path,
+                                type: item.type
+                            });
+                        }
+                    }
+                    
+                    if (data._embedded && data._embedded.items && data._embedded.items.length === limit) {
+                        offset += limit;
+                    } else {
+                        break;
+                    }
+                }
+            } catch (err) { 
+                console.error('Yandex getTrashItems error:', err); 
+            }
+            return all;
+        }
+
+        async function googleRestoreItem(itemId) {
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}`, {
+                method: 'PATCH', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trashed: false })
+            });
+            return response.ok;
+        }
+
+        async function yandexRestoreItem(itemPath) {
+            const response = await fetch(`https://cloud-api.yandex.net/v1/disk/trash/resources/restore?path=${encodeURIComponent(itemPath)}`, {
+                method: 'POST', headers: { 'Authorization': `OAuth ${accessToken}` }
+            });
+            return response.status === 202 || response.status === 200;
+        }
+
+        async function googlePermanentDeleteItem(itemId) {
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}`, {
+                method: 'DELETE', headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            return response.ok;
+        }
+
+        async function yandexPermanentDeleteItem(itemPath) {
+            const response = await fetch(`https://cloud-api.yandex.net/v1/disk/trash/resources?path=${encodeURIComponent(itemPath)}`, {
+                method: 'DELETE', headers: { 'Authorization': `OAuth ${accessToken}` }
+            });
+            return response.status === 202 || response.status === 204;
+        }
+
+        async function googleUploadFile(file, parentId) {
+            const metadata = { name: file.name, mimeType: file.type, parents: parentId === 'root' ? [] : [parentId] };
+            const formData = new FormData();
+            formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            formData.append('file', file);
+            const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}` }, body: formData
+            });
+            const result = await response.json();
+            return !!result.id;
+        }
+
+        async function yandexUploadFile(file, parentPath) {
+            let targetPath = parentPath === '/' ? `/${file.name}` : `${parentPath}/${file.name}`;
+            const uploadUrlResp = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/upload?path=${encodeURIComponent(targetPath)}&overwrite=true`, {
+                method: 'GET', headers: { 'Authorization': `OAuth ${accessToken}` }
+            });
+            const uploadData = await uploadUrlResp.json();
+            const response = await fetch(uploadData.href, { method: 'PUT', body: file });
+            return response.ok;
+        }
+
+        async function googleMoveToTrash(itemId) {
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}`, {
+                method: 'PATCH', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trashed: true })
+            });
+            return response.ok;
+        }
+
+        async function yandexMoveToTrash(itemPath) {
+            const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(itemPath)}`, {
+                method: 'DELETE', headers: { 'Authorization': `OAuth ${accessToken}` }
+            });
+            return response.status === 202 || response.status === 204;
+        }
+
+        async function googleRenameItem(itemId, newName) {
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}`, {
+                method: 'PATCH', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName })
+            });
+            return response.ok;
+        }
+
+        async function yandexRenameItem(oldPath, newPath) {
+            const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/move?from=${encodeURIComponent(oldPath)}&path=${encodeURIComponent(newPath)}&overwrite=false`, {
+                method: 'POST', headers: { 'Authorization': `OAuth ${accessToken}` }
+            });
+            return response.ok || response.status === 202;
+        }
+
+        async function googleCopyItem(fileId, newName) {
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/copy`, {
+                method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName })
+            });
+            return response.ok;
+        }
+
+        async function yandexCopyItem(oldPath, newPath) {
+            const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/copy?from=${encodeURIComponent(oldPath)}&path=${encodeURIComponent(newPath)}&overwrite=false`, {
+                method: 'POST', headers: { 'Authorization': `OAuth ${accessToken}` }
+            });
+            return response.ok || response.status === 202;
+        }
+
+        async function googleCreateFolder(folderName, parentId) {
+            const metadata = { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: parentId === 'root' ? [] : [parentId] };
+            const response = await fetch('https://www.googleapis.com/drive/v3/files', {
+                method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(metadata)
+            });
+            return response.ok;
+        }
+
+        async function yandexCreateFolder(folderName, parentPath) {
+            let newPath = parentPath === '/' ? `/${folderName}` : `${parentPath}/${folderName}`;
+            const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(newPath)}`, {
+                method: 'PUT', headers: { 'Authorization': `OAuth ${accessToken}` }
+            });
+            return response.status === 201 || response.status === 200;
+        }
+
+        async function googleGetStorageInfo() {
+            const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota', {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const data = await response.json();
+            return { usedBytes: parseInt(data.storageQuota.usage) || 0, totalBytes: parseInt(data.storageQuota.limit) || (15 * 1024 * 1024 * 1024) };
+        }
+
+        async function yandexGetStorageInfo() {
+            const response = await fetch('https://cloud-api.yandex.net/v1/disk/', {
+                headers: { 'Authorization': `OAuth ${accessToken}` }
+            });
+            const data = await response.json();
+            return { usedBytes: data.used_space || 0, totalBytes: data.total_space || (5 * 1024 * 1024 * 1024) };
+        }
+
+        async function googleDownloadFile(fileId, fileName) {
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            return true;
+        }
+
+        async function yandexDownloadFile(itemPath, fileName) {
+            const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(itemPath)}`, {
+                headers: { 'Authorization': `OAuth ${accessToken}` }
+            });
+            const data = await response.json();
+            const downloadResponse = await fetch(data.href);
+            const blob = await downloadResponse.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            return true;
+        }
+
+        async function googleGetLink(fileId) {
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=webViewLink`, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const data = await response.json();
+            return data.webViewLink;
+        }
+
+        async function yandexGetLink(itemPath) {
+            const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(itemPath)}`, {
+                headers: { 'Authorization': `OAuth ${accessToken}` }
+            });
+            const data = await response.json();
+            return data.href;
+        }
+
+        async function refreshToken() {
+            const accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+            const account = accounts.find(acc => acc.email === email && acc.service === cloudType);
+            if (!account || !account.refreshToken) return null;
+            const response = await fetch('http://localhost:3000/token', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: account.refreshToken, grant_type: 'refresh_token', service: cloudType })
+            });
+            const data = await response.json();
+            if (data.access_token) { account.accessToken = data.access_token; localStorage.setItem('nimbus_accounts', JSON.stringify(accounts)); accessToken = data.access_token; return data.access_token; }
+            return null;
+        }
+
+        // ========== ЗАГРУЗКА ПАПОК ==========
+        async function loadAllFolders() {
+            let folders = [];
+            if (cloudType === 'google') {
+                let pageToken = '';
+                while (true) {
+                    let url = `https://www.googleapis.com/drive/v3/files?fields=files(id,name,mimeType)&pageSize=1000&q=mimeType='application/vnd.google-apps.folder' and trashed=false`;
+                    if (pageToken) url += `&pageToken=${pageToken}`;
+                    const response = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                    if (response.status === 401) { await refreshToken(); continue; }
+                    const data = await response.json();
+                    if (data.files) folders.push(...data.files);
+                    if (data.nextPageToken) pageToken = data.nextPageToken;
+                    else break;
+                }
+            } else {
+                let limit = 100, offset = 0;
+                while (true) {
+                    let url = `https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent('/')}&limit=${limit}&offset=${offset}&fields=_embedded.items.name,_embedded.items.path,_embedded.items.type,_embedded.items.resource_id`;
+                    const response = await fetch(url, { headers: { 'Authorization': `OAuth ${accessToken}` } });
+                    if (response.status === 401) { await refreshToken(); continue; }
+                    const data = await response.json();
+                    if (data._embedded && data._embedded.items) {
+                        for (const item of data._embedded.items) {
+                            if (item.type === 'dir') folders.push({ id: item.resource_id, name: item.name, path: item.path });
+                        }
+                    }
+                    if (data._embedded && data._embedded.items.length === limit) offset += limit;
+                    else break;
+                }
+            }
+            return folders;
+        }
+
+        async function loadTargetFolders(targetToken, targetService) {
+            if (targetService === 'google') {
+                const response = await fetch('https://www.googleapis.com/drive/v3/files?fields=files(id,name,mimeType)&q=mimeType=\'application/vnd.google-apps.folder\' and trashed=false', {
+                    headers: { 'Authorization': `Bearer ${targetToken}` }
+                });
+                const data = await response.json();
+                return data.files || [];
+            } else {
+                let all = [], limit = 100, offset = 0;
+                while (true) {
+                    let url = `https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent('/')}&limit=${limit}&offset=${offset}&fields=_embedded.items.name,_embedded.items.path,_embedded.items.type,_embedded.items.resource_id`;
+                    let response = await fetch(url, { headers: { 'Authorization': `OAuth ${targetToken}` } });
+                    if (response.status === 401) {
+                        const newToken = await refreshTargetToken(targetService, targetToken);
+                        if (newToken) { targetToken = newToken; continue; }
+                        else break;
+                    }
+                    const data = await response.json();
+                    if (data._embedded && data._embedded.items) {
+                        for (const item of data._embedded.items) {
+                            if (item.type === 'dir') all.push({ id: item.resource_id, name: item.name, path: item.path });
+                        }
+                    }
+                    if (data._embedded && data._embedded.items.length === limit) offset += limit;
+                    else break;
+                }
+                return all;
+            }
+        }
+
+        async function refreshTargetToken(service, oldToken) {
+            const accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+            const account = accounts.find(acc => acc.accessToken === oldToken && acc.service === service);
+            if (!account || !account.refreshToken) return null;
+            const response = await fetch('http://localhost:3000/token', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: account.refreshToken, grant_type: 'refresh_token', service: service })
+            });
+            const data = await response.json();
+            if (data.access_token) { account.accessToken = data.access_token; localStorage.setItem('nimbus_accounts', JSON.stringify(accounts)); return data.access_token; }
+            return null;
+        }
+
+        async function downloadFileAsBlob(sourceService, sourceToken, itemId, itemPath) {
+            if (sourceService === 'google') {
+                let response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}?alt=media`, {
+                    headers: { 'Authorization': `Bearer ${sourceToken}` }
+                });
+                if (response.status === 401) {
+                    const newToken = await refreshSourceToken('google', sourceToken);
+                    if (newToken) {
+                        sourceToken = newToken;
+                        response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}?alt=media`, {
+                            headers: { 'Authorization': `Bearer ${sourceToken}` }
+                        });
+                    }
+                }
+                return await response.blob();
+            } else {
+                let response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(itemPath)}`, {
+                    headers: { 'Authorization': `OAuth ${sourceToken}` }
+                });
+                if (response.status === 401) {
+                    const newToken = await refreshSourceToken('yandex', sourceToken);
+                    if (newToken) {
+                        sourceToken = newToken;
+                        response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(itemPath)}`, {
+                            headers: { 'Authorization': `OAuth ${sourceToken}` }
+                        });
+                    }
+                }
+                const data = await response.json();
+                const downloadResponse = await fetch(data.href);
+                return await downloadResponse.blob();
+            }
+        }
+
+        async function refreshSourceToken(service, oldToken) {
+            const accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+            const account = accounts.find(acc => acc.accessToken === oldToken && acc.service === service);
+            if (!account || !account.refreshToken) return null;
+            const response = await fetch('http://localhost:3000/token', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: account.refreshToken, grant_type: 'refresh_token', service: service })
+            });
+            const data = await response.json();
+            if (data.access_token) { account.accessToken = data.access_token; localStorage.setItem('nimbus_accounts', JSON.stringify(accounts)); return data.access_token; }
+            return null;
+        }
+
+        async function moveToCloud(targetToken, targetFolderId, sourceItemId, sourceItemName, sourceItemPath, isFolder, sourceService, targetService, updateProgress) {
+            let fileName = sourceItemName;
+            if (!fileName && sourceItemPath) fileName = sourceItemPath.split('/').pop();
+            try {
+                if (!isFolder) {
+                    const fileBlob = await downloadFileAsBlob(sourceService, accessToken, sourceItemId, sourceItemPath);
+                    if (targetService === 'google') {
+                        const metadata = { name: fileName, parents: targetFolderId === 'root' ? [] : [targetFolderId] };
+                        const formData = new FormData();
+                        formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                        formData.append('file', fileBlob, fileName);
+                        const uploadPromise = new Promise((resolve, reject) => {
+                            const xhr = new XMLHttpRequest();
+                            xhr.upload.onprogress = (e) => { if (e.lengthComputable && updateProgress) updateProgress(Math.round((e.loaded / e.total) * 100)); };
+                            xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText)); else reject(new Error('Upload failed')); };
+                            xhr.onerror = () => reject(new Error('Network error'));
+                            xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart');
+                            xhr.setRequestHeader('Authorization', `Bearer ${targetToken}`);
+                            xhr.send(formData);
+                        });
+                        await uploadPromise;
+                    } else {
+                        let targetPath = targetFolderId === '/' || targetFolderId === 'root' ? `disk:/${fileName}` : `disk:${targetFolderId.replace(/^disk:/, '')}/${fileName}`;
+                        let uploadUrlResponse = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/upload?path=${encodeURIComponent(targetPath)}&overwrite=true`, {
+                            method: 'GET', headers: { 'Authorization': `OAuth ${targetToken}` }
+                        });
+                        if (uploadUrlResponse.status === 401) {
+                            const newToken = await refreshTargetToken('yandex', targetToken);
+                            if (newToken) uploadUrlResponse = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/upload?path=${encodeURIComponent(targetPath)}&overwrite=true`, {
+                                method: 'GET', headers: { 'Authorization': `OAuth ${newToken}` }
+                            });
+                        }
+                        const uploadData = await uploadUrlResponse.json();
+                        const uploadPromise = new Promise((resolve, reject) => {
+                            const xhr = new XMLHttpRequest();
+                            xhr.upload.onprogress = (e) => { if (e.lengthComputable && updateProgress) updateProgress(Math.round((e.loaded / e.total) * 100)); };
+                            xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) resolve(); else reject(new Error('Upload failed')); };
+                            xhr.onerror = () => reject(new Error('Network error'));
+                            xhr.open('PUT', uploadData.href);
+                            xhr.send(fileBlob);
+                        });
+                        await uploadPromise;
+                    }
+                    if (sourceService === 'google') await googleMoveToTrash(sourceItemId);
+                    else await yandexMoveToTrash(sourceItemPath);
+                }
+                return true;
+            } catch (err) { console.error('Move error:', err); throw err; }
+        }
+
+        // ========== ОСНОВНЫЕ ФУНКЦИИ ==========
+        async function loadItems() {
+            if (isTrashMode) {
+                await loadTrashItems();
+                return;
+            }
+            document.getElementById('filesContainer').innerHTML = '<div class="loading">Загрузка...</div>';
+            try {
+                allItems = cloudType === 'google' ? await googleGetItems(currentFolderId) : await yandexGetItems(currentFolderId);
+                applySortAndRender();
+                await updateStats();
+                updateBreadcrumb();
+            } catch (err) { document.getElementById('filesContainer').innerHTML = `<div class="loading">Ошибка: ${err.message}</div>`; }
+        }
+
+        async function loadTrashItems() {
+            document.getElementById('filesContainer').innerHTML = '<div class="loading">Загрузка корзины...</div>';
+            try {
+                trashItems = cloudType === 'google' ? await googleGetTrashItems() : await yandexGetTrashItems();
+                renderTrashList();
+            } catch (err) { document.getElementById('filesContainer').innerHTML = `<div class="loading">Ошибка: ${err.message}</div>`; }
+        }
+
+        function renderTrashList() {
+            const container = document.getElementById('filesContainer');
+            if (trashItems.length === 0) { container.innerHTML = '<div class="loading">Корзина пуста</div>'; return; }
+            let html = '<div class="file-list">';
+            for (const item of trashItems) {
+                const isChecked = selectedFiles.has(item.id);
+                const isFolder = item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir';
+                const icon = getFileIcon(item);
+                const size = isFolder ? '—' : formatFileSize(item.size);
+                const date = formatDate(item.modifiedTime || item.createdTime);
+                html += `<div class="file-list-item" data-id="${item.id}" data-path="${item.path || ''}" data-is-folder="${isFolder}">
+                    <div class="file-check"><input type="checkbox" class="file-checkbox" data-id="${item.id}" ${isChecked ? 'checked' : ''}></div>
+                    <div class="file-icon">${icon}</div>
+                    <div class="file-info"><div class="file-name">${escapeHtml(item.name)}</div><div class="file-size">${size} • ${date}</div></div>
+                </div>`;
+            }
+            html += '</div>';
+            container.innerHTML = html;
+            attachTrashEvents();
+        }
+
+        function attachTrashEvents() {
+            document.querySelectorAll('.file-checkbox').forEach(cb => {
+                cb.removeEventListener('change', handleTrashCheckboxChange);
+                cb.addEventListener('change', handleTrashCheckboxChange);
+            });
+        }
+
+        function handleTrashCheckboxChange(e) {
+            const id = e.target.dataset.id;
+            if (e.target.checked) selectedFiles.add(id);
+            else selectedFiles.delete(id);
+            updateButtonsState();
+        }
+
+        async function restoreSelected() {
+            if (selectedFiles.size === 0) { alert('Выберите элементы для восстановления'); return; }
+            let success = 0;
+            for (const id of selectedFiles) {
+                const item = trashItems.find(i => i.id === id);
+                if (!item) continue;
+                try {
+                    let result;
+                    if (cloudType === 'google') result = await googleRestoreItem(id);
+                    else result = await yandexRestoreItem(item.path);
+                    if (result) success++;
+                } catch (err) { console.error(err); }
+            }
+            alert(`Восстановлено: ${success}`);
+            selectedFiles.clear();
+            await loadTrashItems();
+            updateButtonsState();
+        }
+
+        async function permanentDeleteSelected() {
+            if (selectedFiles.size === 0) { alert('Выберите элементы для удаления'); return; }
+            if (!confirm(`Удалить ${selectedFiles.size} элемент(ов) навсегда? Это действие необратимо!`)) return;
+            let success = 0;
+            for (const id of selectedFiles) {
+                const item = trashItems.find(i => i.id === id);
+                if (!item) continue;
+                try {
+                    let result;
+                    if (cloudType === 'google') result = await googlePermanentDeleteItem(id);
+                    else result = await yandexPermanentDeleteItem(item.path);
+                    if (result) success++;
+                } catch (err) { console.error(err); }
+            }
+            alert(`Удалено навсегда: ${success}`);
+            selectedFiles.clear();
+            await loadTrashItems();
+            updateButtonsState();
+        }
+
+        async function uploadFile(file) {
+            try {
+                let success = cloudType === 'google' ? await googleUploadFile(file, currentFolderId) : await yandexUploadFile(file, currentFolderId);
+                if (success) { alert(`Файл загружен!`); await loadItems(); } else alert('Ошибка загрузки');
+            } catch (err) { alert('Ошибка: ' + err.message); }
+        }
+
+        async function moveSelectedToTrash() {
+            if (selectedFiles.size === 0) { alert('Выберите элементы'); return; }
+            if (!confirm(`Переместить ${selectedFiles.size} элемент(ов) в корзину?`)) return;
+            let success = 0;
+            for (const id of selectedFiles) {
+                const item = allItems.find(i => i.id === id);
+                if (!item) continue;
+                try {
+                    let result;
+                    if (cloudType === 'google') result = await googleMoveToTrash(id);
+                    else result = await yandexMoveToTrash(item.path);
+                    if (result) success++;
+                } catch (err) { console.error(err); }
+            }
+            alert(`Перемещено в корзину: ${success}`);
+            selectedFiles.clear();
+            await loadItems();
+            updateButtonsState();
+        }
+
+        async function renameSelected() {
+            if (selectedFiles.size !== 1) { alert('Выберите один файл'); return; }
+            const itemId = Array.from(selectedFiles)[0];
+            const item = allItems.find(i => i.id === itemId);
+            if (!item) return;
+            const newName = prompt('Введите новое имя:', item.name);
+            if (!newName) return;
+            try {
+                let success;
+                if (cloudType === 'google') success = await googleRenameItem(itemId, newName);
+                else {
+                    const oldPath = item.path;
+                    const parentPath = oldPath.substring(0, oldPath.lastIndexOf('/'));
+                    const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`;
+                    success = await yandexRenameItem(oldPath, newPath);
+                }
+                if (success) { alert('Переименовано!'); await loadItems(); }
+                else alert('Ошибка переименования');
+            } catch (err) { alert('Ошибка: ' + err.message); }
+        }
+
+        async function copySelected() {
+            if (selectedFiles.size !== 1) { alert('Выберите один файл для копирования'); return; }
+            const itemId = Array.from(selectedFiles)[0];
+            const item = allItems.find(i => i.id === itemId);
+            if (!item) return;
+            const lastDot = item.name.lastIndexOf('.');
+            const baseName = lastDot > 0 ? item.name.substring(0, lastDot) : item.name;
+            const ext = lastDot > 0 ? item.name.substring(lastDot) : '';
+            const newName = baseName + ' (Копия)' + ext;
+            try {
+                let success;
+                if (cloudType === 'google') success = await googleCopyItem(itemId, newName);
+                else {
+                    const oldPath = item.path;
+                    const parentPath = oldPath.substring(0, oldPath.lastIndexOf('/'));
+                    const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`;
+                    success = await yandexCopyItem(oldPath, newPath);
+                }
+                if (success) { alert('Файл скопирован!'); await loadItems(); }
+                else alert('Ошибка копирования');
+            } catch (err) { alert('Ошибка: ' + err.message); }
+        }
+
+        async function downloadSelected() {
+            if (selectedFiles.size === 0) { alert('Выберите файлы для скачивания'); return; }
+            let success = 0;
+            for (const id of selectedFiles) {
+                const item = allItems.find(i => i.id === id);
+                if (!item) continue;
+                const isFolder = item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir';
+                if (isFolder) { alert(`Папка "${item.name}" не может быть скачана. Используйте архивацию.`); continue; }
+                try {
+                    if (cloudType === 'google') await googleDownloadFile(id, item.name);
+                    else await yandexDownloadFile(item.path, item.name);
+                    success++;
+                } catch (err) { console.error(err); }
+            }
+            alert(`Скачано файлов: ${success}`);
+        }
+
+        async function getLinkSelected() {
+            if (selectedFiles.size !== 1) { alert('Выберите один файл для получения ссылки'); return; }
+            const itemId = Array.from(selectedFiles)[0];
+            const item = allItems.find(i => i.id === itemId);
+            if (!item) return;
+            const isFolder = item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir';
+            if (isFolder) { alert('Ссылка для папки недоступна'); return; }
+            try {
+                let link;
+                if (cloudType === 'google') link = await googleGetLink(itemId);
+                else link = await yandexGetLink(item.path);
+                await navigator.clipboard.writeText(link);
+                alert('Ссылка скопирована в буфер обмена!');
+            } catch (err) { alert('Ошибка получения ссылки: ' + err.message); }
+        }
+
+        async function printSelected() {
+            if (selectedFiles.size !== 1) { alert('Выберите один файл для печати'); return; }
+            const itemId = Array.from(selectedFiles)[0];
+            const item = allItems.find(i => i.id === itemId);
+            if (!item) return;
+            const isFolder = item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir';
+            if (isFolder) { alert('Папку нельзя распечатать'); return; }
+            const fileName = item.name.toLowerCase();
+            const printFormats = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.pdf', '.txt'];
+            if (!printFormats.some(ext => fileName.endsWith(ext))) { alert('Печать доступна только для изображений и текстовых документов'); return; }
+            try {
+                let blob;
+                if (cloudType === 'google') {
+                    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}?alt=media`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                    blob = await response.blob();
+                } else {
+                    const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(item.path)}`, {
+                        headers: { 'Authorization': `OAuth ${accessToken}` }
+                    });
+                    const data = await response.json();
+                    const downloadResponse = await fetch(data.href);
+                    blob = await downloadResponse.blob();
+                }
+                const url = URL.createObjectURL(blob);
+                const printWindow = window.open('', '_blank');
+                if (fileName.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/)) {
+                    printWindow.document.write(`<html><head><title>Печать: ${escapeHtml(item.name)}</title></head><body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;"><img src="${url}" style="max-width:100%;max-height:100%;"></body></html>`);
+                } else {
+                    printWindow.document.write(`<html><head><title>Печать: ${escapeHtml(item.name)}</title></head><body><iframe src="${url}" style="width:100%;height:100%;border:none;"></iframe></body></html>`);
+                }
+                printWindow.document.close();
+                printWindow.print();
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+            } catch (err) { alert('Ошибка печати: ' + err.message); }
+        }
+
+        async function shareSelected() {
+            if (selectedFiles.size === 0) { alert('Выберите файлы для перемещения'); return; }
+            const itemId = Array.from(selectedFiles)[0];
+            const item = allItems.find(i => i.id === itemId);
+            if (!item) return;
+            const allAccounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+            const otherAccounts = allAccounts.filter(acc => acc.email !== email);
+            if (otherAccounts.length === 0) { alert('Нет других подключенных облаков'); return; }
+            const container = document.getElementById('shareCloudsList');
+            container.innerHTML = '';
+            otherAccounts.forEach(acc => {
+                const div = document.createElement('div');
+                div.className = 'share-cloud-item';
+                div.innerHTML = `<img src="assets/cloud-icon-${acc.service}.png" style="width:40px"><div><div style="font-weight:bold">${escapeHtml(acc.name)}</div><div style="font-size:12px;color:#666">${escapeHtml(acc.email)}</div></div>`;
+                div.onclick = async () => {
+                    closeModal('shareCloudModal');
+                    pendingMoveTarget = acc;
+                    pendingMoveTargetToken = acc.accessToken;
+                    pendingMoveItemId = itemId;
+                    pendingMoveItemName = item.name;
+                    pendingMoveItemIsFolder = item.mimeType.includes('folder');
+                    pendingMoveItemPath = item.path;
+                    pendingMoveSourceService = cloudType;
+                    pendingMoveFolderId = acc.service === 'yandex' ? '/' : 'root';
+                    const folders = await loadTargetFolders(acc.accessToken, acc.service);
+                    renderFolderSelect(folders, acc.service);
+                    document.getElementById('folderSelectModal').style.display = 'flex';
+                };
+                container.appendChild(div);
+            });
+            document.getElementById('shareCloudModal').style.display = 'flex';
+        }
+
+        function renderFolderSelect(folders, targetService) {
+            const body = document.getElementById('folderSelectBody');
+            body.innerHTML = '';
+            let html = '<div class="new-folder-input"><input type="text" id="newFolderNameInput" placeholder="Название новой папки"><button id="createNewFolderBtn">Создать</button></div>';
+            if (!folders || folders.length === 0) html += '<div class="loading">Папки не найдены</div>';
+            else folders.forEach(folder => { html += `<div class="folder-item" data-id="${folder.path || folder.id}"><div class="folder-icon">📁</div><div class="folder-name">${escapeHtml(folder.name)}</div></div>`; });
+            html += `<div class="folder-item" data-id="${targetService === 'yandex' ? '/' : 'root'}"><div class="folder-icon">📁</div><div class="folder-name">Корень</div></div>`;
+            body.innerHTML = html;
+            body.querySelectorAll('.folder-item').forEach(item => {
+                item.onclick = () => { body.querySelectorAll('.folder-item').forEach(i => i.style.background = ''); item.style.background = '#e8eaf6'; pendingMoveFolderId = item.dataset.id; };
+            });
+            const createBtn = document.getElementById('createNewFolderBtn');
+            if (createBtn) createBtn.onclick = async () => {
+                const folderName = document.getElementById('newFolderNameInput').value.trim();
+                if (!folderName) { alert('Введите название'); return; }
+                try {
+                    let newId;
+                    if (pendingMoveTarget.service === 'google') {
+                        const metadata = { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: pendingMoveFolderId === 'root' ? [] : [pendingMoveFolderId] };
+                        const response = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { 'Authorization': `Bearer ${pendingMoveTargetToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(metadata) });
+                        const data = await response.json();
+                        newId = data.id;
+                    } else {
+                        const parentPath = pendingMoveFolderId === '/' ? '/' : pendingMoveFolderId;
+                        const newPath = parentPath === '/' ? `/${folderName}` : `${parentPath}/${folderName}`;
+                        await fetch(`https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(newPath)}`, { method: 'PUT', headers: { 'Authorization': `OAuth ${pendingMoveTargetToken}` } });
+                        newId = newPath;
+                    }
+                    alert(`Папка "${folderName}" создана!`);
+                    const updatedFolders = await loadTargetFolders(pendingMoveTargetToken, pendingMoveTarget.service);
+                    renderFolderSelect(updatedFolders, pendingMoveTarget.service);
+                    setTimeout(() => {
+                        const newItem = body.querySelector(`.folder-item[data-id="${newId}"]`);
+                        if (newItem) { body.querySelectorAll('.folder-item').forEach(i => i.style.background = ''); newItem.style.background = '#e8eaf6'; pendingMoveFolderId = newId; }
+                    }, 100);
+                } catch (err) { alert('Ошибка создания папки: ' + err.message); }
+            };
+        }
+
+        async function confirmMoveToFolder() {
+            if (!pendingMoveTarget || !pendingMoveItemId) { alert('Ошибка: данные для перемещения не найдены'); closeModal('folderSelectModal'); return; }
+            closeModal('folderSelectModal');
+            const progressContainer = document.getElementById('globalProgressContainer');
+            progressContainer.style.display = 'block';
+            progressContainer.innerHTML = `<div class="global-progress"><div>📦 Перемещение... <span id="moveProgress">0%</span></div></div>`;
+            try {
+                await moveToCloud(pendingMoveTargetToken, pendingMoveFolderId, pendingMoveItemId, pendingMoveItemName, pendingMoveItemPath, pendingMoveItemIsFolder, pendingMoveSourceService, pendingMoveTarget.service, (percent) => {
+                    document.getElementById('moveProgress').textContent = percent + '%';
+                });
+                alert(`"${pendingMoveItemName}" успешно перемещён в облако "${pendingMoveTarget.name}"!`);
+                await loadItems();
+            } catch (err) { alert('Ошибка перемещения: ' + err.message); }
+            finally { progressContainer.style.display = 'none'; progressContainer.innerHTML = ''; pendingMoveTarget = null; pendingMoveItemId = null; pendingMoveItemName = null; }
+        }
+
+        // ========== ПЕРЕМЕЩЕНИЕ ВНУТРИ ХРАНИЛИЩА ==========
+        async function showMoveInsideModal() {
+            if (selectedFiles.size === 0) { alert('Выберите элементы для перемещения'); return; }
+            moveInsideItems = [];
+            for (const id of selectedFiles) {
+                const item = allItems.find(i => i.id === id);
+                if (item) moveInsideItems.push(item);
+            }
+            moveInsideTargetFolderId = currentFolderId;
+            const folders = await loadAllFolders();
+            renderMoveInsideFolderSelect(folders);
+            document.getElementById('moveInsideModal').style.display = 'flex';
+        }
+
+        function renderMoveInsideFolderSelect(folders) {
+            const body = document.getElementById('moveInsideBody');
+            body.innerHTML = '';
+            let html = '<div class="new-folder-input"><input type="text" id="moveInsideNewFolderName" placeholder="Название новой папки"><button id="moveInsideCreateFolderBtn">Создать</button></div>';
+            if (!folders || folders.length === 0) html += '<div class="loading">Папки не найдены</div>';
+            else {
+                folders.forEach(folder => {
+                    const folderValue = cloudType === 'google' ? folder.id : (folder.path || folder.id);
+                    html += `<div class="folder-item" data-id="${folderValue}"><div class="folder-icon">📁</div><div class="folder-name">${escapeHtml(folder.name)}</div></div>`;
+                });
+            }
+            const rootValue = cloudType === 'yandex' ? '/' : 'root';
+            html += `<div class="folder-item" data-id="${rootValue}"><div class="folder-icon">📁</div><div class="folder-name">Корень</div></div>`;
+            body.innerHTML = html;
+            
+            body.querySelectorAll('.folder-item').forEach(item => {
+                item.onclick = () => { 
+                    body.querySelectorAll('.folder-item').forEach(i => i.style.background = ''); 
+                    item.style.background = '#e8eaf6'; 
+                    moveInsideTargetFolderId = item.dataset.id; 
+                };
+            });
+            
+            const createBtn = document.getElementById('moveInsideCreateFolderBtn');
+            if (createBtn) {
+                createBtn.onclick = async () => {
+                    const folderName = document.getElementById('moveInsideNewFolderName').value.trim();
+                    if (!folderName) { alert('Введите название'); return; }
+                    try {
+                        let newId;
+                        if (cloudType === 'google') {
+                            const metadata = { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: moveInsideTargetFolderId === 'root' ? [] : [moveInsideTargetFolderId] };
+                            const response = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(metadata) });
+                            const data = await response.json();
+                            newId = data.id;
+                        } else {
+                            const parentPath = moveInsideTargetFolderId === '/' ? '' : moveInsideTargetFolderId;
+                            const newPath = parentPath ? `${parentPath}/${folderName}` : `/${folderName}`;
+                            await fetch(`https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent('disk:' + newPath)}`, { method: 'PUT', headers: { 'Authorization': `OAuth ${accessToken}` } });
+                            newId = newPath;
+                        }
+                        alert(`Папка "${folderName}" создана!`);
+                        const updatedFolders = await loadAllFolders();
+                        renderMoveInsideFolderSelect(updatedFolders);
+                        setTimeout(() => {
+                            const newItem = body.querySelector(`.folder-item[data-id="${newId}"]`);
+                            if (newItem) { body.querySelectorAll('.folder-item').forEach(i => i.style.background = ''); newItem.style.background = '#e8eaf6'; moveInsideTargetFolderId = newId; }
+                        }, 100);
+                    } catch (err) { alert('Ошибка создания папки: ' + err.message); }
+                };
+            }
+        }
+
+        async function confirmMoveInside() {
+            if (moveInsideItems.length === 0) { closeModal('moveInsideModal'); return; }
+            closeModal('moveInsideModal');
+            let success = 0;
+            for (const item of moveInsideItems) {
+                try {
+                    let result;
+                    if (cloudType === 'google') {
+                        const getResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${item.id}?fields=parents`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                        const fileData = await getResponse.json();
+                        const currentParent = fileData.parents ? fileData.parents[0] : 'root';
+                        let url = `https://www.googleapis.com/drive/v3/files/${item.id}`;
+                        let addParents = moveInsideTargetFolderId === 'root' ? 'root' : moveInsideTargetFolderId;
+                        let removeParents = (currentParent && currentParent !== 'root') ? currentParent : '';
+                        if (addParents) url += `?addParents=${addParents}`;
+                        if (removeParents) url += `${addParents ? '&' : '?'}removeParents=${removeParents}`;
+                        const response = await fetch(url, { method: 'PATCH', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+                        result = response.ok;
+                    } else {
+                        let oldPath = item.path;
+                        if (!oldPath.startsWith('disk:')) oldPath = 'disk:' + oldPath;
+                        
+                        let targetPath = moveInsideTargetFolderId;
+                        if (targetPath === '/' || targetPath === 'root') targetPath = '';
+                        if (!targetPath.startsWith('disk:')) targetPath = 'disk:' + targetPath;
+                        
+                        let newPath;
+                        if (targetPath === 'disk:' || targetPath === 'disk:/' || targetPath === '') {
+                            newPath = `disk:/${item.name}`;
+                        } else {
+                            newPath = `${targetPath}/${item.name}`;
+                        }
+                        
+                        const encodedFrom = encodeURIComponent(oldPath);
+                        const encodedTo = encodeURIComponent(newPath);
+                        const url = `https://cloud-api.yandex.net/v1/disk/resources/move?from=${encodedFrom}&path=${encodedTo}&overwrite=false`;
+                        
+                        const response = await fetch(url, { method: 'POST', headers: { 'Authorization': `OAuth ${accessToken}` } });
+                        result = response.ok || response.status === 202;
+                    }
+                    if (result) success++;
+                } catch (err) { console.error(err); }
+            }
+            alert(`Перемещено: ${success}`);
+            moveInsideItems = [];
+            selectedFiles.clear();
+            updateButtonsState();
+            await loadItems();
+        }
+
+        async function archiveSelected() {
+            if (selectedFiles.size === 0) { alert('Выберите файлы для архивации'); return; }
+            const itemsToArchive = [];
+            for (const id of selectedFiles) { const item = allItems.find(i => i.id === id); if (item) itemsToArchive.push(item); }
+            const container = document.getElementById('archiveMenuList');
+            container.innerHTML = `
+                <div class="share-cloud-item" data-action="download"><div style="font-size:32px">📥</div><div><div style="font-weight:bold">Архивировать и скачать</div><div style="font-size:12px;color:#666">Создать архив и скачать на устройство</div></div></div>
+                <div class="share-cloud-item" data-action="save"><div style="font-size:32px">💾</div><div><div style="font-weight:bold">Архивировать и сохранить</div><div style="font-size:12px;color:#666">Создать архив и сохранить в хранилище</div></div></div>
+                <div class="share-cloud-item" data-action="share"><div style="font-size:32px">☁️</div><div><div style="font-weight:bold">Архивировать и переместить</div><div style="font-size:12px;color:#666">Создать архив и переместить в другое облако</div></div></div>`;
+            container.querySelectorAll('.share-cloud-item').forEach(el => {
+                el.onclick = async () => {
+                    closeModal('archiveMenuModal');
+                    const action = el.dataset.action;
+                    if (action === 'download') await archiveAndDownload(itemsToArchive);
+                    else if (action === 'save') await archiveAndSave(itemsToArchive);
+                    else if (action === 'share') await archiveAndShare(itemsToArchive);
+                };
+            });
+            document.getElementById('archiveMenuModal').style.display = 'flex';
+        }
+
+        async function archiveAndDownload(items) {
+            const progressContainer = document.getElementById('globalProgressContainer');
+            progressContainer.style.display = 'block';
+            progressContainer.innerHTML = `<div class="global-progress"><div>📦 Создание архива... <span id="archiveProgress">0%</span></div></div>`;
+            try {
+                const zip = new JSZip();
+                let totalSize = 0;
+                for (const item of items) {
+                    if (item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') totalSize += await getFolderSize(item.id || item.path);
+                    else totalSize += parseInt(item.size) || 0;
+                }
+                let processed = 0;
+                for (const item of items) {
+                    if (item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') await addFolderToZip(zip, item);
+                    else {
+                        let blob;
+                        if (cloudType === 'google') {
+                            const response = await fetch(`https://www.googleapis.com/drive/v3/files/${item.id}?alt=media`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                            blob = await response.blob();
+                        } else {
+                            const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(item.path)}`, { headers: { 'Authorization': `OAuth ${accessToken}` } });
+                            const data = await response.json();
+                            const downloadResponse = await fetch(data.href);
+                            blob = await downloadResponse.blob();
+                        }
+                        zip.file(item.name, blob);
+                        processed += parseInt(item.size) || 0;
+                        const percent = Math.min(100, Math.round((processed / totalSize) * 100));
+                        document.getElementById('archiveProgress').textContent = percent + '%';
+                    }
+                }
+                const content = await zip.generateAsync({ type: 'blob' });
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `archive_${Date.now()}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                alert(`Архив создан и скачан! Содержит ${items.length} элементов.`);
+            } catch (err) { alert('Ошибка: ' + err.message); }
+            finally { progressContainer.style.display = 'none'; progressContainer.innerHTML = ''; }
+        }
+
+        async function addFolderToZip(zip, folder) {
+            let items = [];
+            if (cloudType === 'google') items = await googleGetItems(folder.id);
+            else items = await yandexGetItems(folder.path);
+            const folderZip = zip.folder(folder.name);
+            for (const item of items) {
+                if (item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') {
+                    await addFolderToZip(folderZip, item);
+                } else {
+                    let blob;
+                    if (cloudType === 'google') {
+                        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${item.id}?alt=media`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                        blob = await response.blob();
+                    } else {
+                        const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(item.path)}`, { headers: { 'Authorization': `OAuth ${accessToken}` } });
+                        const data = await response.json();
+                        const downloadResponse = await fetch(data.href);
+                        blob = await downloadResponse.blob();
+                    }
+                    folderZip.file(item.name, blob);
+                }
+            }
+        }
+
+        async function getFolderSize(idOrPath) {
+            let total = 0;
+            let items = [];
+            if (cloudType === 'google') items = await googleGetItems(idOrPath);
+            else items = await yandexGetItems(idOrPath);
+            for (const item of items) {
+                if (item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') total += await getFolderSize(item.id || item.path);
+                else total += parseInt(item.size) || 0;
+            }
+            return total;
+        }
+
+        async function archiveAndSave(items) {
+            const progressContainer = document.getElementById('globalProgressContainer');
+            progressContainer.style.display = 'block';
+            progressContainer.innerHTML = `<div class="global-progress"><div>📦 Создание архива... <span id="archiveProgress">0%</span></div></div>`;
+            try {
+                const zip = new JSZip();
+                let totalSize = 0;
+                for (const item of items) {
+                    if (item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') totalSize += await getFolderSize(item.id || item.path);
+                    else totalSize += parseInt(item.size) || 0;
+                }
+                let processed = 0;
+                for (const item of items) {
+                    if (item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') await addFolderToZip(zip, item);
+                    else {
+                        let blob;
+                        if (cloudType === 'google') {
+                            const response = await fetch(`https://www.googleapis.com/drive/v3/files/${item.id}?alt=media`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                            blob = await response.blob();
+                        } else {
+                            const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(item.path)}`, { headers: { 'Authorization': `OAuth ${accessToken}` } });
+                            const data = await response.json();
+                            const downloadResponse = await fetch(data.href);
+                            blob = await downloadResponse.blob();
+                        }
+                        zip.file(item.name, blob);
+                        processed += parseInt(item.size) || 0;
+                        const percent = Math.min(100, Math.round((processed / totalSize) * 100));
+                        document.getElementById('archiveProgress').textContent = percent + '%';
+                    }
+                }
+                const content = await zip.generateAsync({ type: 'blob' });
+                const archiveName = `archive_${Date.now()}.zip`;
+                const file = new File([content], archiveName);
+                let success;
+                if (cloudType === 'google') success = await googleUploadFile(file, currentFolderId);
+                else success = await yandexUploadFile(file, currentFolderId);
+                if (success) { alert(`Архив "${archiveName}" сохранён в хранилище!`); await loadItems(); }
+                else alert('Ошибка сохранения архива');
+            } catch (err) { alert('Ошибка: ' + err.message); }
+            finally { progressContainer.style.display = 'none'; progressContainer.innerHTML = ''; }
+        }
+
+        async function archiveAndShare(items) {
+            const allAccounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+            const otherAccounts = allAccounts.filter(acc => acc.email !== email);
+            if (otherAccounts.length === 0) { alert('Нет других подключенных облаков'); return; }
+            const container = document.getElementById('shareCloudsList');
+            container.innerHTML = '';
+            otherAccounts.forEach(acc => {
+                const div = document.createElement('div');
+                div.className = 'share-cloud-item';
+                div.innerHTML = `<img src="assets/cloud-icon-${acc.service}.png" style="width:40px"><div><div style="font-weight:bold">${escapeHtml(acc.name)}</div><div style="font-size:12px;color:#666">${escapeHtml(acc.email)}</div></div>`;
+                div.onclick = async () => {
+                    closeModal('shareCloudModal');
+                    let selectedFolderId = acc.service === 'yandex' ? '/' : 'root';
+                    const folders = await loadTargetFolders(acc.accessToken, acc.service);
+                    const folderModalHtml = `
+                        <div class="folder-modal-content"><div class="folder-modal-header">Выберите папку для перемещения архива</div>
+                        <div class="folder-modal-body" id="archiveFolderSelectBody"></div>
+                        <div class="folder-modal-footer"><button id="archiveFolderConfirmBtn" class="confirm">Переместить сюда</button><button id="archiveFolderCancelBtn" class="cancel">Отмена</button></div></div>`;
+                    document.getElementById('folderSelectModal').innerHTML = folderModalHtml;
+                    const renderArchiveFolders = (fl) => {
+                        const body = document.getElementById('archiveFolderSelectBody');
+                        let html = '<div class="new-folder-input"><input type="text" id="archiveNewFolderName" placeholder="Название новой папки"><button id="archiveCreateFolderBtn">Создать</button></div>';
+                        if (!fl || fl.length === 0) html += '<div class="loading">Папки не найдены</div>';
+                        else fl.forEach(f => { html += `<div class="folder-item" data-id="${f.path || f.id}"><div class="folder-icon">📁</div><div class="folder-name">${escapeHtml(f.name)}</div></div>`; });
+                        html += `<div class="folder-item" data-id="${acc.service === 'yandex' ? '/' : 'root'}"><div class="folder-icon">📁</div><div class="folder-name">Корень</div></div>`;
+                        body.innerHTML = html;
+                        body.querySelectorAll('.folder-item').forEach(it => { it.onclick = () => { body.querySelectorAll('.folder-item').forEach(i => i.style.background = ''); it.style.background = '#e8eaf6'; selectedFolderId = it.dataset.id; }; });
+                        const createFolderBtn = document.getElementById('archiveCreateFolderBtn');
+                        if (createFolderBtn) createFolderBtn.onclick = async () => {
+                            const newName = document.getElementById('archiveNewFolderName').value.trim();
+                            if (!newName) { alert('Введите название'); return; }
+                            let newId;
+                            if (acc.service === 'google') {
+                                const metadata = { name: newName, mimeType: 'application/vnd.google-apps.folder', parents: selectedFolderId === 'root' ? [] : [selectedFolderId] };
+                                const response = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { 'Authorization': `Bearer ${acc.accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(metadata) });
+                                const data = await response.json();
+                                newId = data.id;
+                            } else {
+                                const parentPath = selectedFolderId === '/' ? '/' : selectedFolderId;
+                                const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`;
+                                await fetch(`https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(newPath)}`, { method: 'PUT', headers: { 'Authorization': `OAuth ${acc.accessToken}` } });
+                                newId = newPath;
+                            }
+                            alert(`Папка "${newName}" создана!`);
+                            const updated = await loadTargetFolders(acc.accessToken, acc.service);
+                            renderArchiveFolders(updated);
+                            setTimeout(() => { const newItem = body.querySelector(`.folder-item[data-id="${newId}"]`); if (newItem) { body.querySelectorAll('.folder-item').forEach(i => i.style.background = ''); newItem.style.background = '#e8eaf6'; selectedFolderId = newId; } }, 100);
+                        };
+                    };
+                    renderArchiveFolders(folders);
+                    document.getElementById('folderSelectModal').style.display = 'flex';
+                    document.getElementById('archiveFolderConfirmBtn').onclick = async () => {
+                        document.getElementById('folderSelectModal').style.display = 'none';
+                        const progressContainer = document.getElementById('globalProgressContainer');
+                        progressContainer.style.display = 'block';
+                        progressContainer.innerHTML = `<div class="global-progress"><div>📦 Создание и перемещение архива... <span id="archiveProgress">0%</span></div></div>`;
+                        try {
+                            const zip = new JSZip();
+                            let totalSize = 0;
+                            for (const item of items) {
+                                if (item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') totalSize += await getFolderSize(item.id || item.path);
+                                else totalSize += parseInt(item.size) || 0;
+                            }
+                            let processed = 0;
+                            for (const item of items) {
+                                if (item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') await addFolderToZip(zip, item);
+                                else {
+                                    let blob;
+                                    if (cloudType === 'google') {
+                                        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${item.id}?alt=media`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                                        blob = await response.blob();
+                                    } else {
+                                        const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(item.path)}`, { headers: { 'Authorization': `OAuth ${accessToken}` } });
+                                        const data = await response.json();
+                                        const downloadResponse = await fetch(data.href);
+                                        blob = await downloadResponse.blob();
+                                    }
+                                    zip.file(item.name, blob);
+                                    processed += parseInt(item.size) || 0;
+                                    const percent = Math.min(100, Math.round((processed / totalSize) * 100));
+                                    document.getElementById('archiveProgress').textContent = percent + '%';
+                                }
+                            }
+                            const content = await zip.generateAsync({ type: 'blob' });
+                            const archiveName = `archive_${Date.now()}.zip`;
+                            let uploadSuccess = false;
+                            if (acc.service === 'google') {
+                                const metadata = { name: archiveName, mimeType: 'application/zip', parents: selectedFolderId === 'root' ? [] : [selectedFolderId] };
+                                const formData = new FormData();
+                                formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                                formData.append('file', content, archiveName);
+                                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { 'Authorization': `Bearer ${acc.accessToken}` }, body: formData });
+                                const result = await response.json();
+                                uploadSuccess = !!result.id;
+                            } else {
+                                let targetPath = selectedFolderId === '/' ? `/${archiveName}` : `${selectedFolderId}/${archiveName}`;
+                                const uploadUrlResp = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/upload?path=${encodeURIComponent(targetPath)}&overwrite=true`, { method: 'GET', headers: { 'Authorization': `OAuth ${acc.accessToken}` } });
+                                const uploadData = await uploadUrlResp.json();
+                                const uploadResponse = await fetch(uploadData.href, { method: 'PUT', body: content });
+                                uploadSuccess = uploadResponse.ok;
+                            }
+                            if (uploadSuccess) alert(`Архив "${archiveName}" перемещён в облако "${acc.name}"!`);
+                            else alert('Ошибка перемещения архива');
+                            await loadItems();
+                        } catch (err) { alert('Ошибка: ' + err.message); }
+                        finally { progressContainer.style.display = 'none'; progressContainer.innerHTML = ''; }
+                    };
+                    document.getElementById('archiveFolderCancelBtn').onclick = () => document.getElementById('folderSelectModal').style.display = 'none';
+                };
+                container.appendChild(div);
+            });
+            document.getElementById('shareCloudModal').style.display = 'flex';
+        }
+
+        async function createNewFolder() {
+            const folderName = document.getElementById('newFolderName').value.trim();
+            if (!folderName) { alert('Введите название'); return; }
+            try {
+                let success = cloudType === 'google' ? await googleCreateFolder(folderName, currentFolderId) : await yandexCreateFolder(folderName, currentFolderId);
+                if (success) { alert(`Папка создана!`); closeModal('createFolderModal'); document.getElementById('newFolderName').value = ''; await loadItems(); }
+                else alert('Ошибка создания');
+            } catch (err) { alert('Ошибка: ' + err.message); }
+        }
+
+        async function updateStats() {
+            try {
+                let info = cloudType === 'google' ? await googleGetStorageInfo() : await yandexGetStorageInfo();
+                usedBytes = info.usedBytes;
+                const usedGB = usedBytes / (1024 * 1024 * 1024);
+                const percent = (usedGB / limitGB) * 100;
+                document.getElementById('usedValue').innerHTML = `${usedGB.toFixed(1)} ГБ`;
+                const percentElem = document.getElementById('percentValue');
+                percentElem.innerHTML = `${percent.toFixed(1)}%`;
+                percentElem.style.backgroundColor = percent > 80 ? '#f44336' : percent > 50 ? '#ff9800' : '#4caf50';
+            } catch (err) { console.error(err); }
+        }
+
+        function sortItems(items, sortType, sortDirection) {
+            const sorted = [...items];
+            if (sortType === 'name') sorted.sort((a, b) => sortDirection === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+            else if (sortType === 'size') { sorted.sort((a, b) => (parseInt(a.size) || 0) - (parseInt(b.size) || 0)); if (sortDirection === 'desc') sorted.reverse(); }
+            else if (sortType === 'date') { sorted.sort((a, b) => new Date(a.modifiedTime || a.createdTime) - new Date(b.modifiedTime || b.createdTime)); if (sortDirection === 'desc') sorted.reverse(); }
+            return sorted;
+        }
+
+        function applySortAndRender() {
+            const sortValue = document.getElementById('sortSelect').value;
+            const [sortType, sortDirection] = sortValue.split('_');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            let filtered = allItems.filter(item => item.name.toLowerCase().includes(searchTerm));
+            const sorted = sortItems(filtered, sortType, sortDirection);
+            renderItemsList(sorted);
+        }
+
+        function renderItemsList(items) {
+            const container = document.getElementById('filesContainer');
+            if (items.length === 0) { container.innerHTML = '<div class="loading">Папка пуста</div>'; return; }
+            if (currentView === 'list') {
+                let html = '<div class="file-list">';
+                for (const item of items) {
+                    const isChecked = selectedFiles.has(item.id);
+                    const icon = getFileIcon(item);
+                    const size = item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir' ? '—' : formatFileSize(item.size);
+                    const date = formatDate(item.modifiedTime || item.createdTime);
+                    html += `<div class="file-list-item" data-id="${item.id}" data-path="${item.path || ''}" data-is-folder="${item.mimeType?.includes('folder') || item.type === 'dir'}">
+                        <div class="file-check"><input type="checkbox" class="file-checkbox" data-id="${item.id}" ${isChecked ? 'checked' : ''}></div>
+                        <div class="file-icon">${icon}</div>
+                        <div class="file-info"><div class="file-name">${escapeHtml(item.name)}</div><div class="file-size">${size} • ${date}</div></div>
+                    </div>`;
+                }
+                html += '</div>';
+                container.innerHTML = html;
+            } else {
+                let html = '<div class="file-grid">';
+                for (const item of items) {
+                    const isChecked = selectedFiles.has(item.id);
+                    const icon = getFileIcon(item);
+                    const size = item.mimeType === 'application/vnd.google-apps.folder' || item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir' ? '—' : formatFileSize(item.size);
+                    html += `<div class="file-grid-item" data-id="${item.id}" data-path="${item.path || ''}" data-is-folder="${item.mimeType?.includes('folder') || item.type === 'dir'}">
+                        <div class="file-check"><input type="checkbox" class="file-checkbox" data-id="${item.id}" ${isChecked ? 'checked' : ''}></div>
+                        <div class="file-icon">${icon}</div>
+                        <div class="file-name">${escapeHtml(item.name)}</div>
+                        <div class="file-size">${size}</div>
+                    </div>`;
+                }
+                html += '</div>';
+                container.innerHTML = html;
+            }
+            attachItemEvents();
+            updateButtonsState();
+        }
+
+        function attachItemEvents() {
+            document.querySelectorAll('.file-checkbox').forEach(cb => {
+                cb.removeEventListener('change', handleCheckboxChange);
+                cb.addEventListener('change', handleCheckboxChange);
+            });
+            document.querySelectorAll('.file-list-item, .file-grid-item').forEach(el => {
+                el.removeEventListener('click', handleItemClick);
+                el.addEventListener('click', handleItemClick);
+            });
+        }
+
+        function handleCheckboxChange(e) {
+            const id = e.target.dataset.id;
+            if (e.target.checked) selectedFiles.add(id);
+            else selectedFiles.delete(id);
+            updateButtonsState();
+        }
+
+        async function handleItemClick(e) {
+            if (e.target.classList.contains('file-checkbox') || e.target.parentElement?.classList.contains('file-check')) return;
+            const el = e.currentTarget;
+            const id = el.dataset.id;
+            const isFolder = el.dataset.isFolder === 'true';
+            const item = allItems.find(i => i.id === id);
+            if (isFolder && item) {
+                if (cloudType === 'google') { currentFolderId = id; folderPath.push({ id: id, name: item.name }); }
+                else { currentFolderId = item.path; folderPath.push({ id: item.path, name: item.name }); }
+                await loadItems();
+            } else if (item) {
+                document.getElementById('propName').textContent = item.name;
+                document.getElementById('propSize').textContent = formatFileSize(item.size);
+                document.getElementById('propertiesModal').style.display = 'flex';
+            }
+        }
+
+        function updateButtonsState() {
+            const hasSelected = selectedFiles.size > 0;
+            ['renameBtn', 'copyBtn', 'printBtn', 'linkBtn', 'shareBtn', 'archiveBtn', 'saveBtn', 'folderBtn'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) hasSelected ? btn.classList.remove('disabled') : btn.classList.add('disabled');
+            });
+        }
+
+        function updateBreadcrumb() {
+            if (isTrashMode) {
+                document.getElementById('breadcrumbContainer').innerHTML = '<span class="breadcrumb-current">Корзина</span>';
+                return;
+            }
+            const container = document.getElementById('breadcrumbContainer');
+            let html = '';
+            folderPath.forEach((folder, index) => {
+                const isLast = index === folderPath.length - 1;
+                const name = folder.name === 'Корень' ? 'Хранилище' : folder.name;
+                if (isLast) html += `<span class="breadcrumb-current">${escapeHtml(name)}</span>`;
+                else html += `<a class="breadcrumb-item" data-folder-id="${folder.id}">${escapeHtml(name)}</a><span class="breadcrumb-separator">›</span>`;
+            });
+            container.innerHTML = html;
+            container.querySelectorAll('.breadcrumb-item').forEach(link => {
+                link.onclick = async (e) => {
+                    e.preventDefault();
+                    const folderId = link.dataset.folderId;
+                    const index = folderPath.findIndex(f => f.id === folderId);
+                    if (index !== -1) { folderPath = folderPath.slice(0, index + 1); currentFolderId = folderId; await loadItems(); }
+                };
+            });
+        }
+
+        async function goBack() {
+            window.location.href = 'index.html';
+        }
+
+        async function enterTrashMode() {
+            isTrashMode = true;
+            selectedFiles.clear();
+            document.getElementById('trashBadge').style.display = 'inline-block';
+            await loadTrashItems();
+            updateBreadcrumb();
+        }
+
+        async function exitTrashMode() {
+            isTrashMode = false;
+            selectedFiles.clear();
+            document.getElementById('trashBadge').style.display = 'none';
+            currentFolderId = cloudType === 'google' ? 'root' : '/';
+            folderPath = [{ id: currentFolderId, name: 'Корень' }];
+            await loadItems();
+            updateBreadcrumb();
+        }
+
+        async function showTrashActions() {
+            if (selectedFiles.size === 0) { alert('Выберите элементы в корзине'); return; }
+            const container = document.getElementById('trashActionList');
+            container.innerHTML = `
+                <div class="share-cloud-item" data-action="restore"><div style="font-size:32px">🔄</div><div><div style="font-weight:bold">Восстановить</div><div style="font-size:12px;color:#666">Восстановить файлы из корзины</div></div></div>
+                <div class="share-cloud-item" data-action="delete"><div style="font-size:32px">🗑️</div><div><div style="font-weight:bold">Удалить навсегда</div><div style="font-size:12px;color:#666">Безвозвратно удалить файлы</div></div></div>`;
+            container.querySelectorAll('.share-cloud-item').forEach(el => {
+                el.onclick = async () => {
+                    closeModal('trashActionModal');
+                    if (el.dataset.action === 'restore') await restoreSelected();
+                    else if (el.dataset.action === 'delete') await permanentDeleteSelected();
+                };
+            });
+            document.getElementById('trashActionModal').style.display = 'flex';
+        }
+
+        // ========== ЗАГРУЗКА ПО ССЫЛКЕ ==========
+        const importBtn = document.getElementById('importFileBtn');
+        const importInput = document.getElementById('importLinkInput');
+        const progressContainer = document.getElementById('globalProgressContainer');
+
+        async function downloadViaProxy(url, fileName) {
+            try {
+                progressContainer.style.display = 'block';
+                progressContainer.innerHTML = '<div class="global-progress">⏳ Загрузка... 0%</div>';
+                const proxyUrl = '/fetch-file?url=' + encodeURIComponent(url);
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const blob = await response.blob();
+                let finalName = fileName;
+                if (!finalName) {
+                    const parts = url.split('/');
+                    let last = parts.pop() || parts.pop();
+                    if (last.includes('?')) last = last.split('?')[0];
+                    finalName = decodeURIComponent(last) || 'downloaded_file';
+                }
+                progressContainer.innerHTML = '<div class="global-progress">📤 Загрузка в облако...</div>';
+                const file = new File([blob], finalName);
+                const success = await uploadFile(file);
+                if (success) { alert('Файл загружен!'); await loadItems(); }
+                else alert('Ошибка загрузки');
+            } catch(e) { alert('Ошибка: ' + e.message); }
+            finally { progressContainer.style.display = 'none'; progressContainer.innerHTML = ''; }
+        }
+
+        importBtn.onclick = () => {
+            const link = importInput.value.trim();
+            if (!link) return alert('Введите ссылку');
+            let name = prompt('Имя файла (Enter для авто):', '');
+            if (name === null) return;
+            if (name.trim() === '') name = '';
+            downloadViaProxy(link, name);
+            importInput.value = '';
+        };
+        importInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') importBtn.click(); });
+
+        // ========== ЛИМИТЫ И ЗАМОЧЕК (ИСПРАВЛЕННЫЕ) ==========
+const limitInputElem = document.getElementById('limitInput');
+const limitMinusElem = document.getElementById('limitMinus');
+const limitPlusElem = document.getElementById('limitPlus');
+const limitUnitSpan = document.getElementById('limitUnit');
+const limitLockBtn = document.getElementById('limitLockBtn');
+
+function updateLimitDisplay() {
+    if (limitUnit === 'GB') {
+        limitInputElem.value = limitGB;
+        limitUnitSpan.textContent = 'ГБ';
+    } else {
+        limitInputElem.value = (limitGB / 1024).toFixed(2);
+        limitUnitSpan.textContent = 'ТБ';
+    }
+}
+
+function saveLimit() {
+    localStorage.setItem(`limit_${email}`, limitGB);
+    updateStats();
+}
+
+function loadLimitLockState() {
+    const saved = localStorage.getItem(`nimbus_limit_locked_${email}`);
+    if (!limitLockBtn) return;
+    
+    if (saved === 'true') {
+        isLimitLocked = true;
+        limitLockBtn.classList.add('locked');
+        limitInputElem.disabled = true;
+        if (limitMinusElem) limitMinusElem.disabled = true;
+        if (limitPlusElem) limitPlusElem.disabled = true;
+        if (limitUnitSpan) limitUnitSpan.classList.add('disabled');
+        const customLimit = localStorage.getItem(`nimbus_custom_limit_${email}`);
+        if (customLimit) {
+            limitGB = parseFloat(customLimit);
+            updateLimitDisplay();
+            saveLimit();
+        }
+    } else {
+        isLimitLocked = false;
+        limitLockBtn.classList.remove('locked');
+        limitInputElem.disabled = false;
+        if (limitMinusElem) limitMinusElem.disabled = false;
+        if (limitPlusElem) limitPlusElem.disabled = false;
+        if (limitUnitSpan) limitUnitSpan.classList.remove('disabled');
+    }
+}
+
+function toggleLimitLock() {
+    isLimitLocked = !isLimitLocked;
+    localStorage.setItem(`nimbus_limit_locked_${email}`, isLimitLocked);
+    
+    if (isLimitLocked) {
+        limitLockBtn.classList.add('locked');
+        limitInputElem.disabled = true;
+        if (limitMinusElem) limitMinusElem.disabled = true;
+        if (limitPlusElem) limitPlusElem.disabled = true;
+        if (limitUnitSpan) limitUnitSpan.classList.add('disabled');
+        localStorage.setItem(`nimbus_custom_limit_${email}`, limitGB);
+        alert(`Лимит зафиксирован: ${limitUnit === 'GB' ? limitGB + ' ГБ' : (limitGB / 1024).toFixed(2) + ' ТБ'}`);
+    } else {
+        limitLockBtn.classList.remove('locked');
+        limitInputElem.disabled = false;
+        if (limitMinusElem) limitMinusElem.disabled = false;
+        if (limitPlusElem) limitPlusElem.disabled = false;
+        if (limitUnitSpan) limitUnitSpan.classList.remove('disabled');
+        alert('Лимит разблокирован. Будет автоматически определён при следующем обновлении');
+        updateStats();
+    }
+}
+
+function changeLimit(delta) {
+    if (isLimitLocked) {
+        alert('Лимит зафиксирован. Нажмите на замочек для разблокировки');
+        return;
+    }
+    let newVal = limitGB + delta;
+    if (newVal < 1) newVal = 1;
+    limitGB = newVal;
+    updateLimitDisplay();
+    saveLimit();
+}
+
+function toggleLimitUnit() {
+    if (isLimitLocked) {
+        alert('Лимит зафиксирован. Нажмите на замочек для разблокировки');
+        return;
+    }
+    
+    if (limitUnit === 'GB') {
+        // Переключаем с ГБ на ТБ
+        limitUnit = 'TB';
+        limitGB = limitGB / 1024;
+        limitInputElem.value = limitGB.toFixed(2);
+        limitUnitSpan.textContent = 'ТБ';
+    } else {
+        // Переключаем с ТБ на ГБ
+        limitUnit = 'GB';
+        limitGB = limitGB * 1024;
+        limitInputElem.value = Math.round(limitGB);
+        limitUnitSpan.textContent = 'ГБ';
+    }
+    saveLimit();
+}
+
+function handleLimitInputChange() {
+    if (isLimitLocked) {
+        alert('Лимит зафиксирован. Нажмите на замочек для разблокировки');
+        updateLimitDisplay();
+        return;
+    }
+    let val = parseFloat(limitInputElem.value);
+    if (isNaN(val)) val = 15;
+    if (limitUnit === 'GB') {
+        limitGB = val;
+    } else {
+        limitGB = val * 1024;
+    }
+    if (limitGB < 1) limitGB = 1;
+    updateLimitDisplay();
+    saveLimit();
+}
+
+// Привязываем обработчики
+if (limitMinusElem) limitMinusElem.onclick = () => changeLimit(-1);
+if (limitPlusElem) limitPlusElem.onclick = () => changeLimit(1);
+if (limitInputElem) limitInputElem.onchange = handleLimitInputChange;
+if (limitUnitSpan) limitUnitSpan.onclick = toggleLimitUnit;
+if (limitLockBtn) limitLockBtn.onclick = toggleLimitLock;
+
+loadLimitLockState();
+
+        // ========== ВИД И СОРТИРОВКА ==========
+        document.getElementById('viewListBtn').onclick = () => { currentView = 'list'; applySortAndRender(); };
+        document.getElementById('viewGridBtn').onclick = () => { currentView = 'grid'; applySortAndRender(); };
+        document.getElementById('sortSelect').onchange = () => applySortAndRender();
+        document.getElementById('searchInput').addEventListener('input', () => applySortAndRender());
+
+        // ========== ОСНОВНЫЕ ОБРАБОТЧИКИ ==========
+        document.getElementById('backBtn').onclick = goBack;
+        document.getElementById('uploadBtn').onclick = () => document.getElementById('fileInput').click();
+        document.getElementById('fileInput').onchange = (e) => { if (e.target.files.length) uploadFile(e.target.files[0]); e.target.value = ''; };
+        document.getElementById('renameBtn').onclick = renameSelected;
+        document.getElementById('copyBtn').onclick = copySelected;
+        document.getElementById('trashBtn').onclick = () => {
+            if (isTrashMode) {
+                if (selectedFiles.size > 0) showTrashActions();
+                else exitTrashMode();
+            } else {
+                if (selectedFiles.size > 0) moveSelectedToTrash();
+                else enterTrashMode();
+            }
+        };
+        document.getElementById('saveBtn').onclick = downloadSelected;
+        document.getElementById('linkBtn').onclick = getLinkSelected;
+        document.getElementById('printBtn').onclick = printSelected;
+        document.getElementById('shareBtn').onclick = shareSelected;
+        document.getElementById('archiveBtn').onclick = archiveSelected;
+        document.getElementById('folderBtn').onclick = showMoveInsideModal;
+        document.getElementById('closeModalBtn').onclick = () => document.getElementById('propertiesModal').style.display = 'none';
+        document.getElementById('cancelShareBtn').onclick = () => closeModal('shareCloudModal');
+        document.getElementById('folderSelectCancelBtn').onclick = () => closeModal('folderSelectModal');
+        document.getElementById('createFolderCancelBtn').onclick = () => closeModal('createFolderModal');
+        document.getElementById('createFolderConfirmBtn').onclick = createNewFolder;
+        document.getElementById('archiveMenuCancelBtn').onclick = () => closeModal('archiveMenuModal');
+        document.getElementById('trashActionCancelBtn').onclick = () => closeModal('trashActionModal');
+        document.getElementById('folderSelectConfirmBtn').onclick = confirmMoveToFolder;
+        document.getElementById('moveInsideCancelBtn').onclick = () => closeModal('moveInsideModal');
+        document.getElementById('moveInsideConfirmBtn').onclick = confirmMoveInside;
+
+        function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+
+        // ========== ЗАПУСК ==========
+        loadItems();
+
+        function formatFileSize(bytes) {
+            if (!bytes) return '—';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        }
+        function formatDate(dateString) {
+            if (!dateString) return '—';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        }
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+        }
+    </script>
+</body>
+</html>

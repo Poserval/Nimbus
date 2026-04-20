@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Nimbus - Облачный менеджер</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: url('assets/icon-background.png') no-repeat center center fixed;
+            background-size: cover;
+            min-height: 100vh;
+        }
+
+        .bg-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.6);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app-container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: transparent;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 2;
+        }
+
+        .logo-area {
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 30px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .logo-area img {
+            width: 160px;
+            height: auto;
+            transition: transform 0.3s;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+            position: relative;
+            z-index: 2;
+        }
+
+        .logo-area:hover img {
+            transform: scale(1.05);
+        }
+
+        .rain-container {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 160px;
+            height: 80px;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .raindrop {
+            position: absolute;
+            top: -20px;
+            width: 4px;
+            height: 15px;
+            background: #1a237e;
+            border-radius: 2px;
+            animation: fall linear infinite;
+            opacity: 0;
+        }
+
+        @keyframes fall {
+            0% { top: -20px; opacity: 1; }
+            100% { top: 80px; opacity: 0; }
+        }
+
+        .logo-area:hover .rain-container .raindrop {
+            animation-duration: 0.8s;
+            opacity: 1;
+        }
+
+        .logo-area h1 {
+            font-size: 22px;
+            margin-top: 0px;
+           margin-bottom: 5px;
+            letter-spacing: 3px;
+            color: #1a237e;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+            position: relative;
+            z-index: 2;
+        }
+
+        .logo-area p {
+            font-size: 11px;
+            opacity: 0.7;
+            color: #1a237e;
+            position: relative;
+            z-index: 2;
+        }
+
+        .cloud-header {
+            text-align: center;
+            margin-bottom: 0px;
+            margin-top: -20px;
+        }
+        .cloud-header-icon {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .cloud-header-icon:hover {
+            transform: scale(1.05);
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a237e;
+            text-align: center;
+            margin-bottom: 0px;
+            margin-top: -10px;
+        }
+
+        .aggregators-wrapper {
+            overflow: hidden;
+            transition: max-height 0.4s ease-out, opacity 0.3s ease-out, margin 0.2s ease;
+        }
+        
+        .aggregators-wrapper.hide-aggregators {
+            max-height: 0 !important;
+            opacity: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 0px;
+            margin-top: 10px;
+        }
+
+        .service-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 10px 6px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(4px);
+        }
+
+        .service-card:hover {
+            background: rgba(255,255,255,0.9);
+            transform: translateY(-3px);
+        }
+
+        .service-icon {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            margin-bottom: 6px;
+        }
+
+        .service-name {
+            font-size: 11px;
+            font-weight: 500;
+            color: #1a237e;
+            text-align: center;
+        }
+
+        .placeholder-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .placeholder-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 6px;
+            border-radius: 14px;
+            background: rgba(200,200,200,0.5);
+            backdrop-filter: blur(4px);
+            border: 1px dashed rgba(26,35,126,0.3);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .placeholder-card:hover {
+            background: rgba(200,200,200,0.8);
+            transform: translateY(-2px);
+        }
+
+        .placeholder-icon {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            margin-bottom: 6px;
+        }
+
+        .placeholder-name {
+            font-size: 10px;
+            font-weight: 500;
+            color: #666;
+            text-align: center;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 30px 30px 30px 20px;
+            min-height: 100vh;
+            overflow-y: auto;
+        }
+
+        .clouds-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 180px));
+            gap: 35px;
+            justify-content: flex-start;
+        }
+
+        .cloud-card {
+            width: 180px;
+            text-align: center;
+            cursor: grab;
+            transition: all 0.3s;
+            padding: 20px 12px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            user-select: none;
+            position: relative;
+        }
+
+        .cloud-card:active {
+            cursor: grabbing;
+        }
+
+        .cloud-card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .cloud-card.drag-over {
+            transform: scale(1.02);
+            border: 2px solid #1a237e;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .cloud-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+            background: white;
+        }
+
+        .cloud-card img {
+            width: 110px;
+            height: 110px;
+            object-fit: contain;
+            margin-bottom: 8px;
+            pointer-events: none;
+        }
+
+        .cloud-card-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a237e;
+            margin-top: 8px;
+            pointer-events: none;
+        }
+
+        .cloud-card-email {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+            word-break: break-all;
+            pointer-events: none;
+        }
+
+        .percent-circle {
+            margin: -20px auto 8px auto;
+            background: white;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            border: 2px solid white;
+            position: relative;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .drag-handle {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            font-size: 18px;
+            color: #999;
+            cursor: grab;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: auto;
+            z-index: 10;
+        }
+
+        .cloud-card:hover .drag-handle {
+            opacity: 1;
+        }
+
+        .cloud-card:active .drag-handle {
+            cursor: grabbing;
+        }
+
+        .trash-bin {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 70px;
+            height: 70px;
+            background: rgba(244, 67, 54, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            z-index: 1000;
+            opacity: 0;
+            transform: scale(0.8);
+            pointer-events: none;
+            backdrop-filter: blur(5px);
+            border: 2px solid white;
+        }
+
+        .trash-bin.active {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+
+        .trash-bin.drag-over {
+            background: rgba(244, 67, 54, 1);
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.5);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            width: 320px;
+            text-align: center;
+        }
+
+        .modal-content img {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            margin-bottom: 12px;
+        }
+
+        .modal-content h3 {
+            color: #1a237e;
+            margin-bottom: 8px;
+            font-size: 20px;
+        }
+
+        .modal-content p {
+            color: #666;
+            margin-bottom: 18px;
+            font-size: 14px;
+        }
+
+        .modal-content button {
+            background: #1a237e;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+        .modal-content button:hover {
+            background: #0d1642;
+        }
+        
+        button, .service-card, .placeholder-card, .cloud-card, .drag-handle,
+        .modal-content button {
+            cursor: pointer;
+        }
+        
+        /* ========== МОБИЛЬНАЯ ВЕРСИЯ ========== */
+        @media (max-width: 768px) {
+            .service-card,
+            .placeholder-card,
+            .cloud-card {
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: none;
+                box-shadow: none;
+                border: 1px solid rgba(26, 35, 126, 0.15);
+            }
+            
+            body {
+                background-color: rgba(255, 255, 255, 0.8);
+                background-blend-mode: lighten;
+            }
+
+            .cloud-card:hover {
+                transform: none;
+                box-shadow: none;
+            }
+            
+            .sidebar .logout-btn {
+                display: none;
+            }
+            
+            .mobile-logout-btn {
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                background: #f44336;
+                border: none;
+                z-index: 1001;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            }
+            
+            .mobile-logout-btn::before {
+                content: "🚪";
+                font-size: 24px;
+                color: white;
+            }
+            
+            /* ========== КОРЗИНА ДЛЯ УДАЛЕНИЯ ОБЛАКА (МОБИЛЬНАЯ) ========== */
+            .mobile-trash-bin {
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                background: rgba(244, 67, 54, 0.9);
+                border: none;
+                z-index: 1001;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                transition: all 0.3s;
+                font-size: 24px;
+            }
+            
+            .mobile-trash-bin.active {
+                background: rgba(244, 67, 54, 1);
+                transform: scale(1.1);
+            }
+            
+            .sidebar {
+                width: 100%;
+                position: relative;
+                padding: 70px 15px 20px 15px;
+                height: auto;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 20px 15px;
+            }
+            
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .clouds-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+            
+            .cloud-card {
+                width: 100%;
+                padding: 15px 8px;
+            }
+            
+            .cloud-card img {
+                width: 70px;
+                height: 70px;
+            }
+            
+            .cloud-card-name {
+                font-size: 13px;
+            }
+            
+            .cloud-card-email {
+                font-size: 9px;
+            }
+            
+            .percent-circle {
+                width: 38px;
+                height: 38px;
+                font-size: 11px;
+                margin: -15px auto 5px auto;
+            }
+            
+            .drag-handle {
+                display: none;
+            }
+            
+            .logo-area img {
+                width: 200px;
+                margin-top: -40px;
+            }
+            
+            .logo-area h1 {
+                font-size: 20px;
+                margin-top: -10px;
+            }
+            
+            .cloud-header-icon {
+                width: 150px;
+                height: 150px;
+                margin-top: -10px;
+            }
+            
+            .section-title {
+                font-size: 20px;
+            }
+            
+            .service-icon {
+                width: 35px;
+                height: 35px;
+            }
+            
+            .service-name {
+                font-size: 9px;
+            }
+            
+            .placeholder-icon {
+                width: 35px;
+                height: 35px;
+            }
+            
+            .placeholder-name {
+                font-size: 8px;
+            }
+            
+            .modal-content {
+                width: 90%;
+                margin: 0 15px;
+                padding: 20px;
+            }
+            
+            .modal-content img {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .modal-content h3 {
+                font-size: 18px;
+            }
+            
+            /* Старая корзина скрыта на мобильных */
+            .trash-bin {
+                display: none;
+            }
+            
+            .aggregators-wrapper {
+                max-height: 500px;
+                transition: max-height 0.4s ease-out, opacity 0.3s ease-out;
+            }
+            
+            .aggregators-wrapper.hide-aggregators {
+                max-height: 0 !important;
+                opacity: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            .placeholder-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                margin-top: 15px;
+            }
+        }
+        
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .clouds-grid {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 160px));
+                gap: 20px;
+            }
+            
+            .cloud-card img {
+                width: 80px;
+                height: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-overlay"></div>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="logo-area" id="logoArea">
+                <img src="assets/cloud-icon.png" alt="Nimbus">
+                <div class="rain-container" id="rainContainer"></div>
+                <h1>NIMBUS</h1>
+                <p>Cloud Manager</p>
+            </div>
+
+            <div class="cloud-header">
+                <img src="assets/cloud-icon1.png" alt="Cloud" class="cloud-header-icon" id="toggleAggregatorsBtn">
+            </div>
+
+            <div class="section-title">Облачные хранилища</div>
+            
+            <div class="aggregators-wrapper" id="aggregatorsWrapper">
+                <div class="services-grid" id="servicesGrid">
+                    <div class="service-card" data-service="google">
+                        <img src="assets/cloud-icon-google.png" class="service-icon" alt="Google">
+                        <span class="service-name">Google Drive</span>
+                    </div>
+                    <div class="service-card" data-service="yandex">
+                        <img src="assets/cloud-icon-yandex.png" class="service-icon" alt="Yandex">
+                        <span class="service-name">Яндекс Диск</span>
+                    </div>
+                </div>
+
+                <div class="placeholder-grid" id="placeholderGrid">
+                    <div class="placeholder-card" data-placeholder="1">
+                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
+                        <span class="placeholder-name">Агрегатор 1</span>
+                    </div>
+                    <div class="placeholder-card" data-placeholder="2">
+                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
+                        <span class="placeholder-name">Агрегатор 2</span>
+                    </div>
+                    <div class="placeholder-card" data-placeholder="3">
+                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
+                        <span class="placeholder-name">Агрегатор 3</span>
+                    </div>
+                    <div class="placeholder-card" data-placeholder="4">
+                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
+                        <span class="placeholder-name">Агрегатор 4</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="cloudsGrid" class="clouds-grid"></div>
+        </div>
+    </div>
+
+    <div id="trashBin" class="trash-bin">
+        🗑️
+    </div>
+
+    <div id="addCloudModal" class="modal">
+        <div class="modal-content">
+            <img id="modalIcon" src="" alt="Service">
+            <h3 id="modalTitle">Добавить облако</h3>
+            <p id="modalText">Выберите профиль для авторизации</p>
+            <button id="modalAuthBtn">Авторизоваться</button>
+            <button id="modalCloseBtn" style="background: #999;">Отмена</button>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/nimbus-common.js"></script>
+    
+    <script>
+        let pendingService = null;
+        let accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+        let draggedCardIndex = null;
+        let draggedCardElement = null;
+        let aggregatorsVisible = true;
+        let mobileDeleteMode = false;
+        let pendingDeleteCard = null;
+
+        function saveAccounts() {
+            localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+            renderClouds();
+        }
+
+        async function updateGoogleStorageInfo(acc) {
+            try {
+                const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota', {
+                    headers: { Authorization: `Bearer ${acc.accessToken}` }
+                });
+                
+                if (response.status === 401 && acc.refreshToken) {
+                    const refreshResponse = await fetch(CONFIG.PROXY_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refresh_token: acc.refreshToken, grant_type: 'refresh_token', service: 'google' })
+                    });
+                    const refreshData = await refreshResponse.json();
+                    if (refreshData.access_token) {
+                        acc.accessToken = refreshData.access_token;
+                        const index = accounts.findIndex(a => a.email === acc.email);
+                        if (index !== -1) accounts[index].accessToken = refreshData.access_token;
+                        localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+                        const retryResponse = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota', {
+                            headers: { Authorization: `Bearer ${refreshData.access_token}` }
+                        });
+                        const retryData = await retryResponse.json();
+                        const usedBytes = parseInt(retryData.storageQuota.usage) || 0;
+                        const usedGB = usedBytes / (1024 * 1024 * 1024);
+                        let limitGB = 15;
+                        const savedLimit = localStorage.getItem(`limit_${acc.email}`);
+                        if (savedLimit) limitGB = parseFloat(savedLimit);
+                        const percent = Math.min(100, (usedGB / limitGB) * 100);
+                        return { percent, usedGB, limitGB };
+                    }
+                } else if (response.ok) {
+                    const data = await response.json();
+                    const usedBytes = parseInt(data.storageQuota.usage) || 0;
+                    const usedGB = usedBytes / (1024 * 1024 * 1024);
+                    let limitGB = 15;
+                    const savedLimit = localStorage.getItem(`limit_${acc.email}`);
+                    if (savedLimit) limitGB = parseFloat(savedLimit);
+                    const percent = Math.min(100, (usedGB / limitGB) * 100);
+                    return { percent, usedGB, limitGB };
+                }
+                return null;
+            } catch (err) {
+                console.error('Error getting Google storage info:', err);
+                return null;
+            }
+        }
+
+        async function updateYandexStorageInfo(acc) {
+            try {
+                const response = await fetch('https://cloud-api.yandex.net/v1/disk/', {
+                    headers: { Authorization: `OAuth ${acc.accessToken}` }
+                });
+                
+                if (response.status === 401 && acc.refreshToken) {
+                    const refreshResponse = await fetch(CONFIG.PROXY_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refresh_token: acc.refreshToken, grant_type: 'refresh_token', service: 'yandex' })
+                    });
+                    const refreshData = await refreshResponse.json();
+                    if (refreshData.access_token) {
+                        acc.accessToken = refreshData.access_token;
+                        const index = accounts.findIndex(a => a.email === acc.email);
+                        if (index !== -1) accounts[index].accessToken = refreshData.access_token;
+                        localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+                        const retryResponse = await fetch('https://cloud-api.yandex.net/v1/disk/', {
+                            headers: { Authorization: `OAuth ${refreshData.access_token}` }
+                        });
+                        const retryData = await retryResponse.json();
+                        const usedBytes = retryData.used_space || 0;
+                        const usedGB = usedBytes / (1024 * 1024 * 1024);
+                        let limitGB = 15;
+                        const savedLimit = localStorage.getItem(`limit_${acc.email}`);
+                        if (savedLimit) limitGB = parseFloat(savedLimit);
+                        const percent = Math.min(100, (usedGB / limitGB) * 100);
+                        return { percent, usedGB, limitGB };
+                    }
+                } else if (response.ok) {
+                    const data = await response.json();
+                    const usedBytes = data.used_space || 0;
+                    const usedGB = usedBytes / (1024 * 1024 * 1024);
+                    let limitGB = 15;
+                    const savedLimit = localStorage.getItem(`limit_${acc.email}`);
+                    if (savedLimit) limitGB = parseFloat(savedLimit);
+                    const percent = Math.min(100, (usedGB / limitGB) * 100);
+                    return { percent, usedGB, limitGB };
+                }
+                return null;
+            } catch (err) {
+                console.error('Error getting Yandex storage info:', err);
+                return null;
+            }
+        }
+
+        async function updateStorageInfo(acc) {
+            if (acc.service === 'google') {
+                return await updateGoogleStorageInfo(acc);
+            } else if (acc.service === 'yandex') {
+                return await updateYandexStorageInfo(acc);
+            }
+            return null;
+        }
+
+        async function renderClouds() {
+            const container = document.getElementById('cloudsGrid');
+            if (accounts.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            for (let i = 0; i < accounts.length; i++) {
+                const acc = accounts[i];
+                const info = await updateStorageInfo(acc);
+                const percentInt = info ? Math.round(info.percent) : 0;
+                const bgColor = info ? getColorForPercent(info.percent) : '#4caf50';
+                
+                html += `
+                    <div class="cloud-card" data-index="${i}" data-id="${acc.id}" data-token="${acc.accessToken}" data-email="${acc.email}" data-service="${acc.service}" draggable="true">
+                        <div class="drag-handle" draggable="true">⋮⋮</div>
+                        <img src="assets/cloud-icon-${acc.service}.png" alt="${acc.service}">
+                        <div class="percent-circle" style="background-color: ${bgColor}; color: white;">${percentInt}%</div>
+                        <div class="cloud-card-name">${escapeHtml(acc.name)}</div>
+                        <div class="cloud-card-email">${escapeHtml(acc.email)}</div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+            
+            document.querySelectorAll('.cloud-card[data-token]').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('drag-handle')) return;
+                    if (mobileDeleteMode) {
+                        e.stopPropagation();
+                        const email = card.dataset.email;
+                        const name = card.querySelector('.cloud-card-name')?.textContent || email;
+                        if (confirm(`Удалить облако "${name}"?\nEmail: ${email}\n\nЭто действие нельзя отменить.`)) {
+                            const index = parseInt(card.dataset.index);
+                            accounts = accounts.filter((_, idx) => idx !== index);
+                            saveAccounts();
+                            alert(`Облако "${name}" удалено`);
+                            disableMobileDeleteMode();
+                        }
+                        return;
+                    }
+                    const token = card.dataset.token;
+                    const email = card.dataset.email;
+                    const service = card.dataset.service;
+                    
+                    if (service === 'google') {
+                        window.location.href = `storage.html?token=${token}&email=${encodeURIComponent(email)}`;
+                    } else if (service === 'yandex') {
+                        window.location.href = `storage-yandex.html?token=${token}&email=${encodeURIComponent(email)}`;
+                    }
+                });
+            });
+            
+            initDragAndDrop();
+        }
+
+        function initDragAndDrop() {
+            const cards = document.querySelectorAll('.cloud-card');
+            const trashBin = document.getElementById('trashBin');
+            
+            cards.forEach(card => {
+                card.addEventListener('dragstart', (e) => {
+                    if (mobileDeleteMode) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    e.dataTransfer.setData('text/plain', card.dataset.index);
+                    e.dataTransfer.effectAllowed = 'move';
+                    card.classList.add('dragging');
+                    draggedCardIndex = parseInt(card.dataset.index);
+                    draggedCardElement = card;
+                    trashBin.classList.add('active');
+                });
+                
+                card.addEventListener('dragend', (e) => {
+                    card.classList.remove('dragging');
+                    document.querySelectorAll('.cloud-card').forEach(c => {
+                        c.classList.remove('drag-over');
+                    });
+                    trashBin.classList.remove('active');
+                    trashBin.classList.remove('drag-over');
+                    draggedCardIndex = null;
+                    draggedCardElement = null;
+                });
+                
+                card.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    const targetCard = e.target.closest('.cloud-card');
+                    if (targetCard && draggedCardIndex !== null && parseInt(targetCard.dataset.index) !== draggedCardIndex) {
+                        targetCard.classList.add('drag-over');
+                    }
+                });
+                
+                card.addEventListener('dragleave', (e) => {
+                    const targetCard = e.target.closest('.cloud-card');
+                    if (targetCard) {
+                        targetCard.classList.remove('drag-over');
+                    }
+                });
+                
+                card.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const targetCard = e.target.closest('.cloud-card');
+                    if (targetCard) {
+                        targetCard.classList.remove('drag-over');
+                    }
+                    
+                    if (!targetCard || draggedCardIndex === null) return;
+                    
+                    const fromIndex = draggedCardIndex;
+                    const toIndex = parseInt(targetCard.dataset.index);
+                    
+                    if (isNaN(fromIndex) || isNaN(toIndex) || fromIndex === toIndex) return;
+                    
+                    const [movedItem] = accounts.splice(fromIndex, 1);
+                    accounts.splice(toIndex, 0, movedItem);
+                    
+                    saveAccounts();
+                });
+            });
+            
+            trashBin.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                trashBin.classList.add('drag-over');
+            });
+            
+            trashBin.addEventListener('dragleave', (e) => {
+                trashBin.classList.remove('drag-over');
+            });
+            
+            trashBin.addEventListener('drop', (e) => {
+                e.preventDefault();
+                trashBin.classList.remove('drag-over');
+                
+                if (draggedCardIndex !== null && draggedCardElement) {
+                    const email = draggedCardElement.dataset.email;
+                    const name = draggedCardElement.querySelector('.cloud-card-name')?.textContent || email;
+                    
+                    if (confirm(`Удалить облако "${name}"?\nEmail: ${email}\n\nЭто действие нельзя отменить.`)) {
+                        accounts = accounts.filter((_, idx) => idx !== draggedCardIndex);
+                        saveAccounts();
+                        alert(`Облако "${name}" удалено`);
+                    }
+                }
+                
+                draggedCardIndex = null;
+                draggedCardElement = null;
+                trashBin.classList.remove('active');
+            });
+        }
+        
+        function enableMobileDeleteMode() {
+            mobileDeleteMode = true;
+            const mobileTrashBin = document.getElementById('mobileTrashBin');
+            if (mobileTrashBin) {
+                mobileTrashBin.classList.add('active');
+            }
+            document.querySelectorAll('.cloud-card').forEach(card => {
+                card.style.opacity = '0.7';
+                card.style.cursor = 'pointer';
+            });
+            alert('Режим удаления: нажмите на облако для удаления');
+        }
+        
+        function disableMobileDeleteMode() {
+            mobileDeleteMode = false;
+            const mobileTrashBin = document.getElementById('mobileTrashBin');
+            if (mobileTrashBin) {
+                mobileTrashBin.classList.remove('active');
+            }
+            document.querySelectorAll('.cloud-card').forEach(card => {
+                card.style.opacity = '';
+                card.style.cursor = '';
+            });
+        }
+
+        function startRain() {
+            const container = document.getElementById('rainContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            for (let i = 0; i < 25; i++) {
+                const drop = document.createElement('div');
+                drop.className = 'raindrop';
+                drop.style.left = Math.random() * 100 + '%';
+                drop.style.animationDelay = Math.random() * 1.5 + 's';
+                drop.style.animationDuration = 0.6 + Math.random() * 0.4 + 's';
+                drop.style.width = (3 + Math.random() * 3) + 'px';
+                drop.style.height = (10 + Math.random() * 10) + 'px';
+                drop.style.background = '#1a237e';
+                drop.style.opacity = 0.6 + Math.random() * 0.4;
+                container.appendChild(drop);
+            }
+        }
+
+        function stopRain() {
+            const container = document.getElementById('rainContainer');
+            if (container) {
+                container.innerHTML = '';
+            }
+        }
+
+        function showAddCloudModal(service) {
+            pendingService = service;
+            const modal = document.getElementById('addCloudModal');
+            const modalIcon = document.getElementById('modalIcon');
+            const modalTitle = document.getElementById('modalTitle');
+            
+            if (service === 'google') {
+                modalIcon.src = 'assets/cloud-icon-google.png';
+                modalTitle.textContent = 'Google Drive';
+            } else if (service === 'yandex') {
+                modalIcon.src = 'assets/cloud-icon-yandex.png';
+                modalTitle.textContent = 'Яндекс Диск';
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        function hideModal() {
+            document.getElementById('addCloudModal').style.display = 'none';
+            pendingService = null;
+        }
+
+        async function exchangeGoogleCodeForToken(code) {
+            try {
+                const response = await fetch(CONFIG.PROXY_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, service: 'google' })
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.access_token) {
+                    const userInfo = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+                        headers: { Authorization: `Bearer ${data.access_token}` }
+                    });
+                    const user = await userInfo.json();
+                    
+                    const existingAccount = accounts.find(acc => acc.email === user.email && acc.service === 'google');
+                    if (existingAccount) {
+                        alert(`Аккаунт ${user.email} уже подключён. Нельзя добавить дубликат.`);
+                        document.getElementById('addCloudModal').style.display = 'none';
+                        return;
+                    }
+                    
+                    localStorage.setItem(`limit_${user.email}`, '15');
+                    
+                    alert(`Аккаунт ${user.email} успешно добавлен!`);
+                    accounts.push({
+                        id: Date.now(),
+                        service: 'google',
+                        name: user.email.split('@')[0],
+                        accessToken: data.access_token,
+                        refreshToken: data.refresh_token || null,
+                        email: user.email
+                    });
+                    saveAccounts();
+                    document.getElementById('addCloudModal').style.display = 'none';
+                } else {
+                    alert('Ошибка: ' + (data.error || 'не удалось получить токен'));
+                }
+            } catch (err) {
+                console.error('Fetch error:', err);
+                alert('Ошибка соединения: ' + err.message);
+            }
+        }
+
+        function startGoogleAuth() {
+            window.location.href = getGoogleAuthUrl();
+        }
+
+        async function exchangeYandexCodeForToken(code) {
+            try {
+                const response = await fetch(CONFIG.PROXY_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, service: 'yandex' })
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.access_token) {
+                    const userInfo = await fetch('https://login.yandex.ru/info', {
+                        headers: { Authorization: `OAuth ${data.access_token}` }
+                    });
+                    const user = await userInfo.json();
+                    const userEmail = user.default_email || `${user.login}@yandex.ru`;
+                    
+                    const existingAccount = accounts.find(acc => acc.email === userEmail && acc.service === 'yandex');
+                    if (existingAccount) {
+                        alert(`Аккаунт ${userEmail} уже подключён. Нельзя добавить дубликат.`);
+                        document.getElementById('addCloudModal').style.display = 'none';
+                        return;
+                    }
+                    
+                    localStorage.setItem(`limit_${userEmail}`, '15');
+                    
+                    alert(`Аккаунт ${userEmail} успешно добавлен!`);
+                    accounts.push({
+                        id: Date.now(),
+                        service: 'yandex',
+                        name: user.login,
+                        accessToken: data.access_token,
+                        refreshToken: data.refresh_token || null,
+                        email: userEmail
+                    });
+                    saveAccounts();
+                    document.getElementById('addCloudModal').style.display = 'none';
+                } else {
+                    alert('Ошибка: ' + (data.error || 'не удалось получить токен'));
+                }
+            } catch (err) {
+                console.error('Fetch error:', err);
+                alert('Ошибка соединения: ' + err.message);
+            }
+        }
+
+        function startYandexAuth() {
+            window.location.href = getYandexAuthUrl();
+        }
+
+        function handleOAuthRedirect() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const service = urlParams.get('service');
+            
+            if (code) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
+                if (service === 'google') {
+                    exchangeGoogleCodeForToken(code);
+                } else if (service === 'yandex') {
+                    exchangeYandexCodeForToken(code);
+                } else {
+                    const userChoice = prompt('Выберите сервис для авторизации:\n1 - Google Drive\n2 - Яндекс.Диск');
+                    if (userChoice === '1') {
+                        exchangeGoogleCodeForToken(code);
+                    } else if (userChoice === '2') {
+                        exchangeYandexCodeForToken(code);
+                    } else {
+                        alert('Неверный выбор');
+                    }
+                }
+            }
+        }
+
+        function checkAuth() {
+            const auth = JSON.parse(localStorage.getItem('nimbus_auth') || 'null');
+            if (!auth || auth.expires < Date.now()) {
+                console.log('Не авторизован или сессия истекла');
+            }
+        }
+
+        function logout() {
+            if (confirm('Выйти из аккаунта? Все подключенные облака останутся сохранёнными.')) {
+                localStorage.removeItem('nimbus_auth');
+                alert('Вы вышли из системы');
+                window.location.href = 'reg/index-reg.html';
+            }
+        }
+
+        function toggleAggregators() {
+            const wrapper = document.getElementById('aggregatorsWrapper');
+            if (!wrapper) return;
+            
+            const isMobile = window.innerWidth <= 768;
+            if (!isMobile) return;
+            
+            if (aggregatorsVisible) {
+                wrapper.classList.add('hide-aggregators');
+                aggregatorsVisible = false;
+            } else {
+                wrapper.classList.remove('hide-aggregators');
+                aggregatorsVisible = true;
+            }
+        }
+
+        const logoArea = document.getElementById('logoArea');
+        logoArea.addEventListener('mouseenter', startRain);
+        logoArea.addEventListener('mouseleave', stopRain);
+        logoArea.onclick = () => { window.location.href = 'index.html'; };
+
+        document.querySelectorAll('.service-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const service = card.dataset.service;
+                if (service === 'google') {
+                    showAddCloudModal('google');
+                } else if (service === 'yandex') {
+                    showAddCloudModal('yandex');
+                }
+            });
+        });
+
+        document.querySelectorAll('.placeholder-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const num = card.dataset.placeholder;
+                alert(`Агрегатор ${num} будет добавлен в следующей версии`);
+            });
+        });
+
+        document.getElementById('modalAuthBtn').onclick = () => {
+            if (pendingService === 'google') {
+                startGoogleAuth();
+            } else if (pendingService === 'yandex') {
+                startYandexAuth();
+            }
+            hideModal();
+        };
+
+        document.getElementById('modalCloseBtn').onclick = hideModal;
+        document.getElementById('addCloudModal').onclick = (e) => {
+            if (e.target === document.getElementById('addCloudModal')) {
+                hideModal();
+            }
+        };
+
+        function addLogoutButton() {
+            const sidebar = document.querySelector('.sidebar');
+            const existingLogout = document.getElementById('logoutBtn');
+            if (existingLogout) return;
+            
+            const logoutBtn = document.createElement('button');
+            logoutBtn.id = 'logoutBtn';
+            logoutBtn.className = 'logout-btn';
+            logoutBtn.textContent = 'Выйти';
+            logoutBtn.style.cssText = `
+                margin-top: 20px;
+                padding: 10px;
+                background: rgba(244, 67, 54, 0.8);
+                color: white;
+                border: none;
+                border-radius: 25px;
+                cursor: pointer;
+                font-size: 14px;
+                transition: background 0.2s;
+            `;
+            logoutBtn.onmouseover = () => { logoutBtn.style.background = '#f44336'; };
+            logoutBtn.onmouseout = () => { logoutBtn.style.background = 'rgba(244, 67, 54, 0.8)'; };
+            logoutBtn.onclick = logout;
+            sidebar.appendChild(logoutBtn);
+        }
+        
+        function addMobileLogoutButton() {
+            const existingMobileBtn = document.querySelector('.mobile-logout-btn');
+            if (existingMobileBtn) return;
+            
+            const mobileLogoutBtn = document.createElement('button');
+            mobileLogoutBtn.className = 'mobile-logout-btn';
+            mobileLogoutBtn.onclick = logout;
+            document.body.appendChild(mobileLogoutBtn);
+        }
+        
+        function addMobileTrashBin() {
+            const existingTrashBin = document.getElementById('mobileTrashBin');
+            if (existingTrashBin) return;
+            
+            const mobileTrashBin = document.createElement('button');
+            mobileTrashBin.id = 'mobileTrashBin';
+            mobileTrashBin.className = 'mobile-trash-bin';
+            mobileTrashBin.innerHTML = '🗑️';
+            mobileTrashBin.onclick = () => {
+                if (mobileDeleteMode) {
+                    disableMobileDeleteMode();
+                } else {
+                    enableMobileDeleteMode();
+                }
+            };
+            document.body.appendChild(mobileTrashBin);
+        }
+
+        const toggleBtn = document.getElementById('toggleAggregatorsBtn');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', toggleAggregators);
+        }
+
+        checkAuth();
+        renderClouds();
+        handleOAuthRedirect();
+        addLogoutButton();
+        addMobileLogoutButton();
+        addMobileTrashBin();
+    </script>
+</body>
+</html>

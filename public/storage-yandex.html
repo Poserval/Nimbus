@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Nimbus - Яндекс.Диск</title>
+    <link rel="stylesheet" href="css/storage.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        // Редирект на мобильную версию
+        if (window.innerWidth <= 768) {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+            const email = params.get('email');
+            window.location.href = `storage-mobile.html?cloud=yandex&token=${token}&email=${encodeURIComponent(email)}`;
+        }
+    </script>
+</head>
+<body>
+    <!-- Плавающая иконка -->
+    <div id="floatingIcon" class="floating-icon">
+        <img src="assets/cloud-icon.png" alt="Nimbus" id="floatingImg">
+    </div>
+
+    <!-- Контейнер для вылетающих облаков -->
+    <div id="flyoutCloudsContainer" class="flyout-clouds-container"></div>
+
+    <div class="header">
+        <div class="header-left">
+            <button class="back-btn" id="backBtn">←</button>
+            <div class="limit-control">
+                <span class="limit-label">Лимит:</span>
+                <input type="number" id="limitInput" class="limit-value" value="15" step="1" min="1">
+                <span id="limitUnit" class="limit-unit" style="font-size: 12px; cursor: pointer;" title="Переключить ГБ/ТБ">ГБ</span>
+                <button class="limit-arrow-btn" id="limitMinus">−</button>
+                <button class="limit-arrow-btn" id="limitPlus">+</button>
+                <img id="limitLockBtn" src="assets/icon-lock.png" class="limit-lock-icon" title="Зафиксировать лимит" style="width: 20px; height: 20px; cursor: pointer;">
+            </div>
+            <div class="used-control">
+                <span class="used-label">Использовано:</span>
+                <span class="used-value" id="usedValue">— ГБ</span>
+            </div>
+            <div class="percent-control">
+                <span class="percent-label">Заполнено:</span>
+                <span class="percent-value" id="percentValue">—%</span>
+            </div>
+        </div>
+        <div class="header-center" id="headerCenter">
+            <span class="title">Яндекс.Диск</span>
+            <span id="trashBadge" class="trash-badge" style="display: none;">Корзина</span>
+        </div>
+        <div class="header-right">
+            <button class="action-btn" id="renameBtn" title="Переименовать">
+                <img src="assets/button/button-rename.png" alt="Переименовать" style="width: 40px; height: 40px; display: block;">
+            </button>
+            <button class="action-btn" id="copyBtn" title="Копировать">
+                <img src="assets/button/button-copy.png" alt="Копировать" style="width: 40px; height: 40px; display: block;">
+            </button>
+            <button class="action-btn" id="printBtn" title="Печать">
+                <img src="assets/button/button-print.png" alt="Печать" style="width: 40px; height: 40px; display: block;">
+            </button>
+            <button class="action-btn" id="linkBtn" title="Ссылка">
+                <img src="assets/button/button-link.png" alt="Ссылка" style="width: 40px; height: 40px; display: block;">
+            </button>
+            <button class="action-btn" id="shareBtn" title="Поделиться">
+                <img src="assets/button/button-send.png" alt="Поделиться" style="width: 40px; height: 40px; display: block;">
+            </button>
+            <button class="action-btn" id="archiveBtn" title="Архивировать">
+                <img src="assets/button/button-archive.png" alt="Архивировать" style="width: 40px; height: 40px; display: block;">
+            </button>
+            <button class="action-btn" id="saveBtn" title="Сохранить">
+                <img src="assets/button/button-save.png" alt="Сохранить" style="width: 40px; height: 40px; display: block;">
+            </button>
+            <button class="action-btn upload-btn" id="uploadBtn" title="Загрузить файл">
+                <img src="assets/button/button-download.png" alt="Загрузить" style="width: 40px; height: 40px; display: block;">
+            </button>
+            <button class="action-btn folder-btn" id="folderBtn" title="Переместить">
+                <img src="assets/button/button-move.png" alt="Переместить" style="width: 40px; height: 40px; display: block;">
+            </button>
+            <button class="action-btn trash-btn" id="trashBtn" title="Корзина">
+                <img src="assets/button/button-trash.png" alt="Корзина" style="width: 40px; height: 40px; display: block;">
+            </button>
+            <div class="dropdown" id="sortDropdown">
+                <button class="action-btn" id="sortBtn" title="Сортировка">📊</button>
+                <div class="dropdown-content" id="sortMenu">
+                    <div class="sort-item" data-sort="name">
+                        <span class="sort-label">Имя</span>
+                        <div class="sort-arrows">
+                            <button class="sort-arrow" data-sort-type="name" data-direction="asc">▲</button>
+                            <button class="sort-arrow" data-sort-type="name" data-direction="desc">▼</button>
+                        </div>
+                    </div>
+                    <div class="sort-item" data-sort="date">
+                        <span class="sort-label">Дата</span>
+                        <div class="sort-arrows">
+                            <button class="sort-arrow" data-sort-type="date" data-direction="asc">▲</button>
+                            <button class="sort-arrow" data-sort-type="date" data-direction="desc">▼</button>
+                        </div>
+                    </div>
+                    <div class="sort-item" data-sort="size">
+                        <span class="sort-label">Размер</span>
+                        <div class="sort-arrows">
+                            <button class="sort-arrow" data-sort-type="size" data-direction="asc">▲</button>
+                            <button class="sort-arrow" data-sort-type="size" data-direction="desc">▼</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dropdown" id="viewDropdown">
+                <button class="action-btn" id="viewBtn" title="Вид">👁️</button>
+                <div class="dropdown-content" id="viewMenu">
+                    <div class="view-item" data-view="list">Список</div>
+                    <div class="view-item" data-view="grid">Таблица</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="top-bar">
+        <input type="text" class="search-box" id="searchInput" placeholder="Поиск файлов...">
+        <div class="import-link-container" style="display: flex; gap: 8px; margin-left: auto;">
+            <input type="text" id="importLinkInput" class="import-link-input" placeholder="Вставить ссылку на файл..." style="flex: 1; padding: 12px 16px; border: 1px solid #ddd; border-radius: 30px; font-size: 14px; min-width: 250px;">
+            <button id="importFileBtn" class="import-link-btn" style="background: #4caf50; color: white; border: none; padding: 0 20px; border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: bold;">📥 Получить</button>
+        </div>
+    </div>
+    <div class="breadcrumb-container" id="breadcrumbContainer"></div>
+
+    <div id="globalProgressContainer" style="position: sticky; top: 120px; z-index: 97; display: none;"></div>
+
+    <div class="content">
+        <div id="filesContainer"></div>
+        <input type="file" id="fileInput">
+    </div>
+    
+    <div id="propertiesModal" class="modal">
+        <div class="modal-content">
+            <h3>Свойства файла</h3>
+            <p><strong>Имя:</strong> <span id="propName"></span></p>
+            <p><strong>Размер:</strong> <span id="propSize"></span></p>
+            <p><strong>Тип:</strong> <span id="propType"></span></p>
+            <p><strong>Дата создания:</strong> <span id="propCreated"></span></p>
+            <p><strong>Дата изменения:</strong> <span id="propModified"></span></p>
+            <button id="closeModalBtn">Закрыть</button>
+        </div>
+    </div>
+    
+    <div id="shareCloudModal" class="share-modal">
+        <div class="share-modal-content">
+            <h3>Выберите облако для перемещения</h3>
+            <div id="shareCloudsList" class="share-cloud-list"></div>
+            <button id="cancelShareBtn" class="share-cancel-btn">Отмена</button>
+        </div>
+    </div>
+    
+    <div id="folderSelectModal" class="folder-select-modal">
+        <div class="folder-select-content">
+            <div class="folder-select-header">
+                <h3>Выберите папку для перемещения</h3>
+                <button class="folder-select-close" id="folderSelectCloseBtn">×</button>
+            </div>
+            <div class="folder-select-body" id="folderSelectBody">
+                <div class="loading">Загрузка папок...</div>
+            </div>
+            <div class="folder-select-footer">
+                <button class="folder-select-btn cancel" id="folderSelectCancelBtn">Отмена</button>
+                <button class="folder-select-btn create" id="folderSelectCreateBtn">➕ Создать папку</button>
+                <button class="folder-select-btn" id="folderSelectConfirmBtn">Переместить сюда</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="createFolderModal" class="modal">
+        <div class="modal-content">
+            <h3>Создать новую папку</h3>
+            <input type="text" id="newFolderName" placeholder="Название папки" style="width: 100%; padding: 10px; margin: 15px 0; border: 1px solid #ddd; border-radius: 10px;">
+            <button id="createFolderConfirmBtn">Создать</button>
+            <button id="createFolderCancelBtn" style="background: #999;">Отмена</button>
+        </div>
+    </div>
+    
+    <div id="moveInsideModal" class="folder-select-modal">
+        <div class="folder-select-content">
+            <div class="folder-select-header">
+                <h3>Выберите папку для перемещения</h3>
+                <button class="folder-select-close" id="moveInsideCloseBtn">×</button>
+            </div>
+            <div class="folder-select-body" id="moveInsideBody">
+                <div class="loading">Загрузка папок...</div>
+            </div>
+            <div class="folder-select-footer">
+                <button class="folder-select-btn cancel" id="moveInsideCancelBtn">Отмена</button>
+                <button class="folder-select-btn" id="moveInsideConfirmBtn">Переместить сюда</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== ПЕРЕДАЧА ПАРАМЕТРОВ В ГЛОБАЛЬНУЮ ОБЛАСТЬ ========== -->
+    <script>
+        const urlParamsLocal = new URLSearchParams(window.location.search);
+        window.accessToken = urlParamsLocal.get('token');
+        window.email = urlParamsLocal.get('email');
+        
+        console.log('Token loaded:', window.accessToken ? 'OK' : 'NOT FOUND');
+        console.log('Email loaded:', window.email);
+    </script>
+
+    <!-- Подключаем модули -->
+    <script src="js/config.js"></script>
+    <script src="js/nimbus-common.js"></script>
+    <script src="js/storage-share.js"></script>
+    <script src="js/storage-core-yandex.js"></script>
+
+    <!-- Плавающая иконка и вылетающие облака -->
+    <script>
+        // ========== ПЛАВАЮЩАЯ ИКОНКА С ВЫЛЕТАЮЩИМИ ОБЛАКАМИ ==========
+        let flyoutTimeout = null;
+        let currentAccounts = [];
+        
+        function loadAccounts() {
+            const saved = localStorage.getItem('nimbus_accounts');
+            if (saved) {
+                try {
+                    currentAccounts = JSON.parse(saved);
+                } catch (e) {
+                    currentAccounts = [];
+                }
+            }
+            return currentAccounts;
+        }
+        
+        function getServiceIcon(service) {
+            const icons = {
+                google: 'assets/cloud-icon-google.png',
+                yandex: 'assets/cloud-icon-yandex.png',
+                dropbox: 'assets/cloud-icon-dropbox.png',
+                mailru: 'assets/cloud-icon-mailru.png'
+            };
+            return icons[service] || 'assets/cloud-icon.png';
+        }
+        
+        function getDisplayNameFromEmail(email) {
+            if (!email) return 'Облако';
+            return email.split('@')[0];
+        }
+        
+        function showFlyoutClouds() {
+            const accounts = loadAccounts();
+            const currentEmail = window.email;
+            const container = document.getElementById('flyoutCloudsContainer');
+            
+            if (!currentEmail) {
+                console.log('Email not available yet');
+                return;
+            }
+            
+            const otherAccounts = accounts.filter(acc => acc.email !== currentEmail);
+            
+            if (otherAccounts.length === 0) {
+                const msg = document.createElement('div');
+                msg.className = 'flyout-message';
+                msg.textContent = 'Нет других подключенных облаков';
+                msg.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(0,0,0,0.8);
+                    color: white;
+                    padding: 12px 24px;
+                    border-radius: 30px;
+                    font-size: 14px;
+                    z-index: 20000;
+                    animation: fadeOut 2s forwards;
+                `;
+                document.body.appendChild(msg);
+                setTimeout(() => msg.remove(), 2000);
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            const icon = document.getElementById('floatingIcon');
+            const iconRect = icon.getBoundingClientRect();
+            const centerX = iconRect.left + iconRect.width / 2;
+            const centerY = iconRect.top + iconRect.height / 2;
+            
+            otherAccounts.forEach((acc, index) => {
+                const flyoutIcon = document.createElement('div');
+                flyoutIcon.className = 'flyout-cloud-icon';
+                flyoutIcon.setAttribute('data-email', acc.email);
+                flyoutIcon.setAttribute('data-token', acc.accessToken);
+                flyoutIcon.setAttribute('data-service', acc.service);
+                
+                const angle = (index / otherAccounts.length) * Math.PI * 2;
+                const radius = 160;
+                const targetX = centerX + Math.cos(angle) * radius - 27;
+                const targetY = centerY + Math.sin(angle) * radius - 27;
+                
+                flyoutIcon.style.left = centerX - 27 + 'px';
+                flyoutIcon.style.top = centerY - 27 + 'px';
+                flyoutIcon.setAttribute('data-target-x', targetX);
+                flyoutIcon.setAttribute('data-target-y', targetY);
+                
+                const displayName = getDisplayNameFromEmail(acc.email);
+                
+                flyoutIcon.innerHTML = `
+                    <img src="${getServiceIcon(acc.service)}" alt="${acc.service}" class="flyout-cloud-img">
+                    <div class="flyout-cloud-name">${escapeHtml(displayName)}</div>
+                `;
+                
+                container.appendChild(flyoutIcon);
+                
+                setTimeout(() => {
+                    flyoutIcon.classList.add('flyout-animate');
+                    flyoutIcon.style.left = targetX + 'px';
+                    flyoutIcon.style.top = targetY + 'px';
+                }, index * 50);
+            });
+            
+            if (flyoutTimeout) clearTimeout(flyoutTimeout);
+            flyoutTimeout = setTimeout(() => {
+                hideFlyoutClouds();
+            }, 5000);
+        }
+        
+        function hideFlyoutClouds() {
+            const container = document.getElementById('flyoutCloudsContainer');
+            const icons = container.querySelectorAll('.flyout-cloud-icon');
+            
+            icons.forEach(icon => {
+                icon.classList.remove('flyout-animate');
+                icon.classList.add('flyout-hide');
+            });
+            
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 300);
+        }
+        
+        function switchToCloud(email, token, service) {
+            if (service === 'google') {
+                window.location.href = `storage.html?token=${token}&email=${encodeURIComponent(email)}`;
+            } else if (service === 'yandex') {
+                window.location.href = `storage-yandex.html?token=${token}&email=${encodeURIComponent(email)}`;
+            } else {
+                window.location.href = `storage.html?token=${token}&email=${encodeURIComponent(email)}`;
+            }
+        }
+        
+        function goToMainScreen() {
+            window.location.href = 'index.html';
+        }
+        
+        function initFloatingIcon() {
+            const icon = document.getElementById('floatingIcon');
+            const img = document.getElementById('floatingImg');
+            let isDragging = false;
+            let startX, startY;
+            let currentLeft, currentTop;
+            let clickTimer = null;
+            
+            const savedLeft = localStorage.getItem('nimbus_icon_left');
+            const savedTop = localStorage.getItem('nimbus_icon_top');
+            
+            if (savedLeft !== null && savedTop !== null) {
+                icon.style.left = savedLeft + 'px';
+                icon.style.top = savedTop + 'px';
+                icon.style.position = 'fixed';
+                icon.style.right = 'auto';
+                icon.style.bottom = 'auto';
+            } else {
+                icon.style.position = 'fixed';
+                icon.style.bottom = '30px';
+                icon.style.right = '30px';
+                icon.style.left = 'auto';
+                icon.style.top = 'auto';
+            }
+            
+            icon.addEventListener('mouseenter', () => {
+                img.src = 'assets/cloud-icon1.png';
+            });
+            
+            icon.addEventListener('mouseleave', () => {
+                if (!isDragging) {
+                    img.src = 'assets/cloud-icon.png';
+                }
+            });
+            
+            icon.addEventListener('click', (e) => {
+                if (isDragging) return;
+                
+                if (clickTimer) {
+                    clearTimeout(clickTimer);
+                    clickTimer = null;
+                    goToMainScreen();
+                } else {
+                    clickTimer = setTimeout(() => {
+                        showFlyoutClouds();
+                        clickTimer = null;
+                    }, 200);
+                }
+            });
+            
+            icon.addEventListener('mousedown', (e) => {
+                if (e.target === icon || icon.contains(e.target)) {
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    
+                    const rect = icon.getBoundingClientRect();
+                    currentLeft = rect.left;
+                    currentTop = rect.top;
+                    
+                    icon.style.cursor = 'grabbing';
+                    img.src = 'assets/cloud-icon1.png';
+                    e.preventDefault();
+                }
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const deltaX = e.clientX - startX;
+                const deltaY = e.clientY - startY;
+                
+                let newLeft = currentLeft + deltaX;
+                let newTop = currentTop + deltaY;
+                
+                const iconWidth = icon.offsetWidth;
+                const iconHeight = icon.offsetHeight;
+                const maxLeft = window.innerWidth - iconWidth;
+                const maxTop = window.innerHeight - iconHeight;
+                
+                newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+                newTop = Math.max(0, Math.min(newTop, maxTop));
+                
+                icon.style.left = newLeft + 'px';
+                icon.style.top = newTop + 'px';
+                icon.style.right = 'auto';
+                icon.style.bottom = 'auto';
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    icon.style.cursor = 'grab';
+                    
+                    const rect = icon.getBoundingClientRect();
+                    localStorage.setItem('nimbus_icon_left', rect.left);
+                    localStorage.setItem('nimbus_icon_top', rect.top);
+                    
+                    setTimeout(() => {
+                        if (!icon.matches(':hover')) {
+                            img.src = 'assets/cloud-icon.png';
+                        }
+                    }, 100);
+                }
+            });
+            
+            icon.style.cursor = 'grab';
+            
+            document.getElementById('flyoutCloudsContainer').addEventListener('dblclick', (e) => {
+                const flyoutIcon = e.target.closest('.flyout-cloud-icon');
+                if (flyoutIcon) {
+                    const email = flyoutIcon.dataset.email;
+                    const token = flyoutIcon.dataset.token;
+                    const service = flyoutIcon.dataset.service;
+                    if (email && token) {
+                        switchToCloud(email, token, service);
+                    }
+                }
+            });
+            
+            document.addEventListener('click', (e) => {
+                const container = document.getElementById('flyoutCloudsContainer');
+                const icon = document.getElementById('floatingIcon');
+                if (container.children.length > 0 && !icon.contains(e.target) && !container.contains(e.target)) {
+                    hideFlyoutClouds();
+                }
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                if (typeof loadItems === 'function') {
+                    loadItems();
+                } else {
+                    console.error('loadItems function not found');
+                }
+                initFloatingIcon();
+            }, 100);
+        });
+    </script>
+
+    <!-- ========== ЗАГРУЗКА ФАЙЛА ПО ССЫЛКЕ ========== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const importLinkInput = document.getElementById('importLinkInput');
+            const importFileBtn = document.getElementById('importFileBtn');
+            const globalProgressContainer = document.getElementById('globalProgressContainer');
+            
+            if (!importFileBtn) {
+                console.error('Кнопка импорта не найдена');
+                return;
+            }
+            
+            async function downloadViaProxy(url, fileName) {
+                try {
+                    if (globalProgressContainer) {
+                        globalProgressContainer.style.display = 'block';
+                        globalProgressContainer.innerHTML = '<div style="background:#e8eaf6; padding:12px; border-radius:12px;">⏳ Загрузка... <span id="importProgress">0%</span></div>';
+                    }
+                    
+                    const proxyUrl = '/fetch-file?url=' + encodeURIComponent(url);
+                    const response = await fetch(proxyUrl);
+                    
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    
+                    const blob = await response.blob();
+                    
+                    let finalFileName = fileName;
+                    if (!finalFileName) {
+                        const urlParts = url.split('/');
+                        let lastPart = urlParts.pop() || urlParts.pop();
+                        if (lastPart.includes('?')) lastPart = lastPart.split('?')[0];
+                        finalFileName = decodeURIComponent(lastPart) || 'downloaded_file';
+                    }
+                    
+                    if (globalProgressContainer) {
+                        globalProgressContainer.innerHTML = '<div style="background:#e8eaf6; padding:12px; border-radius:12px;">📤 Загрузка в облако...</div>';
+                    }
+                    
+                    const file = new File([blob], finalFileName);
+                    const uploadSuccess = await uploadFile(file, currentFolderId);
+                    
+                    if (uploadSuccess) {
+                        alert('Файл "' + finalFileName + '" загружен!');
+                        await loadItems();
+                    } else {
+                        alert('Ошибка загрузки в облако');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Ошибка: ' + err.message);
+                } finally {
+                    if (globalProgressContainer) {
+                        globalProgressContainer.style.display = 'none';
+                        globalProgressContainer.innerHTML = '';
+                    }
+                }
+            }
+            
+            importFileBtn.onclick = () => {
+                const link = importLinkInput.value.trim();
+                if (!link) {
+                    alert('Введите ссылку');
+                    return;
+                }
+                let fileName = prompt('Имя файла (Enter для авто):', '');
+                if (fileName === null) return;
+                if (fileName.trim() === '') fileName = '';
+                downloadViaProxy(link, fileName);
+                importLinkInput.value = '';
+            };
+            
+            importLinkInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') importFileBtn.click();
+            });
+            
+            console.log('✅ Импорт по ссылке активирован');
+        });
+    </script>
+</body>
+</html>
