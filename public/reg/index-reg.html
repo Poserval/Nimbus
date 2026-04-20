@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Nimbus - Регистрация</title>
+    <link rel="stylesheet" href="style-reg.css">
+</head>
+<body>
+    <div class="bg-overlay"></div>
+    
+    <div class="container">
+        <div class="logo-area">
+            <img src="../assets/cloud-icon.png" alt="Nimbus">
+            <h1>NIMBUS</h1>
+            <p>Cloud Manager</p>
+        </div>
+
+        <div class="auth-container">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="login">Вход</button>
+                <button class="tab-btn" data-tab="register">Регистрация</button>
+            </div>
+
+            <!-- Форма входа -->
+            <div class="tab-content active" id="loginTab">
+                <div class="form-group">
+                    <input type="email" id="loginEmail" placeholder="Email">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="loginPassword" placeholder="Пароль">
+                </div>
+                <button id="doLoginBtn" class="auth-btn primary">Войти</button>
+            </div>
+
+            <!-- Форма регистрации -->
+            <div class="tab-content" id="registerTab">
+                <div class="form-group">
+                    <input type="text" id="regName" placeholder="Имя (как будет отображаться)">
+                </div>
+                <div class="form-group">
+                    <input type="email" id="regEmail" placeholder="Email">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="regPassword" placeholder="Пароль (мин. 6 символов)">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="regPasswordConfirm" placeholder="Подтверждение пароля">
+                </div>
+                <button id="doRegisterBtn" class="auth-btn primary">Зарегистрироваться</button>
+            </div>
+
+            <div class="divider">или</div>
+
+            <div class="social-icons">
+                <div class="social-icon" id="googleAuthBtn">
+                    <img src="../assets/cloud-icon-google.png" alt="Google">
+                    <span>Google</span>
+                </div>
+                <div class="social-icon" id="yandexAuthBtn">
+                    <img src="../assets/cloud-icon-yandex.png" alt="Yandex">
+                    <span>Яндекс</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-text">
+            <p>После регистрации вы сможете добавлять облачные хранилища</p>
+        </div>
+    </div>
+
+    <!-- Подключаем конфиг и общие функции -->
+    <script src="../js/config.js"></script>
+    <script src="../js/nimbus-common.js"></script>
+    
+    <script>
+        // ========== КОНФИГУРАЦИЯ (берём из CONFIG) ==========
+        const GOOGLE_CLIENT_ID = CONFIG.GOOGLE_CLIENT_ID;
+        const YANDEX_CLIENT_ID = CONFIG.YANDEX_CLIENT_ID;
+        const PROXY_URL = CONFIG.PROXY_URL;
+        const REDIRECT_URI = CONFIG.GOOGLE_REDIRECT_URI;
+
+        // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+        // escapeHtml уже есть в nimbus-common.js, не дублируем
+
+        // ========== РАБОТА С ПОЛЬЗОВАТЕЛЯМИ ==========
+        function getUsers() {
+            return JSON.parse(localStorage.getItem('nimbus_users') || '{}');
+        }
+
+        function saveUsers(users) {
+            localStorage.setItem('nimbus_users', JSON.stringify(users));
+        }
+
+        function registerUser(name, email, password) {
+            if (!name || !email || !password) {
+                alert('Заполните все поля');
+                return false;
+            }
+            if (password.length < 6) {
+                alert('Пароль должен быть не менее 6 символов');
+                return false;
+            }
+            if (document.getElementById('regPassword').value !== document.getElementById('regPasswordConfirm').value) {
+                alert('Пароли не совпадают');
+                return false;
+            }
+            
+            const users = getUsers();
+            if (users[email]) {
+                alert('Пользователь с таким email уже существует');
+                return false;
+            }
+            
+            users[email] = {
+                name: name,
+                password: btoa(password),
+                registered: Date.now()
+            };
+            saveUsers(users);
+            
+            // Автоматически входим после регистрации
+            loginUser(email, password);
+            return true;
+        }
+
+        function loginUser(email, password) {
+            const users = getUsers();
+            const user = users[email];
+            
+            if (!user || user.password !== btoa(password)) {
+                alert('Неверный email или пароль');
+                return false;
+            }
+            
+            // Сохраняем сессию
+            localStorage.setItem('nimbus_auth', JSON.stringify({
+                email: email,
+                name: user.name,
+                expires: Date.now() + 30 * 24 * 60 * 60 * 1000
+            }));
+            
+            alert(`Добро пожаловать, ${user.name}!`);
+            window.location.href = '../index.html';
+            return true;
+        }
+
+        // ========== OAuth (используем функции из config.js) ==========
+        function startGoogleAuth() {
+            window.location.href = getGoogleAuthUrl();
+        }
+
+        function startYandexAuth() {
+            window.location.href = getYandexAuthUrl();
+        }
+
+        // ========== ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ==========
+        function initTabs() {
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.dataset.tab;
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(`${tabId}Tab`).classList.add('active');
+                });
+            });
+        }
+
+        // ========== ПРОВЕРКА АВТОРИЗАЦИИ ==========
+        function checkAuth() {
+            const auth = JSON.parse(localStorage.getItem('nimbus_auth') || 'null');
+            if (auth && auth.expires > Date.now()) {
+                // Если уже авторизован, можно предложить перейти на главную
+                const goToMain = confirm('Вы уже авторизованы. Перейти на главный экран?');
+                if (goToMain) {
+                    window.location.href = '../index.html';
+                }
+            }
+        }
+
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
+        function init() {
+            initTabs();
+            checkAuth();
+            
+            document.getElementById('doRegisterBtn').onclick = () => {
+                const name = document.getElementById('regName').value;
+                const email = document.getElementById('regEmail').value;
+                const password = document.getElementById('regPassword').value;
+                registerUser(name, email, password);
+            };
+            
+            document.getElementById('doLoginBtn').onclick = () => {
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+                loginUser(email, password);
+            };
+            
+            document.getElementById('googleAuthBtn').onclick = startGoogleAuth;
+            document.getElementById('yandexAuthBtn').onclick = startYandexAuth;
+            
+            // Enter для отправки
+            document.getElementById('loginPassword').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') document.getElementById('doLoginBtn').click();
+            });
+            document.getElementById('regPasswordConfirm').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') document.getElementById('doRegisterBtn').click();
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
