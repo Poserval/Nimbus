@@ -1,43 +1,28 @@
 // ========== config.js ==========
 // Единый конфигурационный файл для всего проекта
-// Версия 1.0
-
-// Определяем базовый URL в зависимости от окружения
-const getBaseUrl = () => {
-    // Если запущено на localhost
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:3000';
-    }
-    // Если запущено на продакшене (автоматически определяем)
-    return `${window.location.protocol}//${window.location.host}`;
-};
+// Версия 1.1 (для деплоя на Render)
 
 // Глобальный конфиг
 const CONFIG = {
-    // API endpoints
-    PROXY_URL: `${getBaseUrl()}/token`,
+    // API endpoints — используем относительный путь (фронтенд и прокси на одном домене)
+    PROXY_URL: '/token',
     
     // OAuth Client IDs
     GOOGLE_CLIENT_ID: '944030768816-dknh5820s2knnbnrlde52q4hg2evcl2u.apps.googleusercontent.com',
     YANDEX_CLIENT_ID: '2dad4c5424324e1c8a7240b3d2a0f6c0',
     
-    // Redirect URIs для OAuth
+    // Redirect URIs для OAuth (автоматически определяются)
     get GOOGLE_REDIRECT_URI() {
-        return `${getBaseUrl()}/index.html`;
+        return `${window.location.origin}/index.html`;
     },
     get YANDEX_REDIRECT_URI() {
-        return `${getBaseUrl()}/index.html`;
+        return `${window.location.origin}/index.html`;
     },
     
-    // Настройки приложения
     APP_NAME: 'Nimbus',
     VERSION: '1.0.0',
-    
-    // Лимиты по умолчанию
     DEFAULT_GOOGLE_LIMIT_GB: 15,
     DEFAULT_YANDEX_LIMIT_GB: 5,
-    
-    // Время кэширования лимита (24 часа в миллисекундах)
     LIMIT_CACHE_TTL: 24 * 60 * 60 * 1000
 };
 
@@ -60,11 +45,9 @@ function getYandexAuthUrl() {
     return `https://oauth.yandex.ru/authorize?response_type=code&client_id=${CONFIG.YANDEX_CLIENT_ID}&redirect_uri=${redirectWithService}&force_confirm=true`;
 }
 
-// Экспортируем в глобальную область
 window.CONFIG = CONFIG;
 window.getGoogleAuthUrl = getGoogleAuthUrl;
 window.getYandexAuthUrl = getYandexAuthUrl;
-window.getBaseUrl = getBaseUrl;
 
 console.log('config.js loaded - окружение:', window.location.hostname);
 console.log('PROXY_URL:', CONFIG.PROXY_URL);
