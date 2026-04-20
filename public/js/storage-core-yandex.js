@@ -2361,10 +2361,17 @@ async function downloadFileAsBlobWithCancel(fileId, signal) {
         headers: { 'Authorization': `OAuth ${accessToken}` },
         signal: signal
     });
-    
     const data = await response.json();
-    const downloadResponse = await fetch(data.href, { signal: signal });
-    return await downloadResponse.blob();
+    const directUrl = data.href;
+    
+    const proxyUrl = `/fetch-file?url=${encodeURIComponent(directUrl)}`;
+    const proxyResponse = await fetch(proxyUrl, { signal: signal });
+    
+    if (!proxyResponse.ok) {
+        throw new Error(`Failed to download via proxy: ${proxyResponse.status}`);
+    }
+    
+    return await proxyResponse.blob();
 }
 
 async function downloadFileAsBlob(fileId) {
