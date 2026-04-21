@@ -1,6 +1,6 @@
 // ========== config.js ==========
 // Единый конфигурационный файл для всего проекта
-// Версия 1.2 (исправлен redirect_uri для Google)
+// Версия 1.1 (для деплоя на Render)
 
 // Глобальный конфиг
 const CONFIG = {
@@ -11,14 +11,11 @@ const CONFIG = {
     GOOGLE_CLIENT_ID: '944030768816-dknh5820s2knnbnrlde52q4hg2evcl2u.apps.googleusercontent.com',
     YANDEX_CLIENT_ID: '2dad4c5424324e1c8a7240b3d2a0f6c0',
     
-    // Redirect URIs для OAuth
+    // Redirect URIs для OAuth (автоматически определяются)
     get GOOGLE_REDIRECT_URI() {
-        // Google: добавляем параметр service=google в redirect_uri
-        const base = `${window.location.origin}/index.html`;
-        return `${base}?service=google`;
+        return `${window.location.origin}/index.html`;
     },
     get YANDEX_REDIRECT_URI() {
-        // Яндекс: параметр service=yandex добавляется отдельно в URL авторизации
         return `${window.location.origin}/index.html`;
     },
     
@@ -48,11 +45,9 @@ function getYandexAuthUrl() {
     return `https://oauth.yandex.ru/authorize?response_type=code&client_id=${CONFIG.YANDEX_CLIENT_ID}&redirect_uri=${redirectWithService}&force_confirm=true`;
 }
 
-// Экспортируем в глобальную область
 window.CONFIG = CONFIG;
 window.getGoogleAuthUrl = getGoogleAuthUrl;
 window.getYandexAuthUrl = getYandexAuthUrl;
 
 console.log('config.js loaded - окружение:', window.location.hostname);
 console.log('PROXY_URL:', CONFIG.PROXY_URL);
-console.log('Google redirect_uri:', CONFIG.GOOGLE_REDIRECT_URI);
