@@ -1171,42 +1171,29 @@
         }
 
         function handleOAuthRedirect() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    let service = urlParams.get('service');
-    
-    // Если service не передан, но code есть — определяем по наличию других параметров
-    if (!service && code) {
-        // Проверяем, есть ли параметр scope (Google его добавляет)
-        const scope = urlParams.get('scope');
-        if (scope && scope.includes('googleapis')) {
-            service = 'google';
-        } else {
-            // По умолчанию считаем, что это Google
-            service = 'google';
-        }
-    }
-    
-    if (code) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        if (service === 'google') {
-            exchangeGoogleCodeForToken(code);
-        } else if (service === 'yandex') {
-            exchangeYandexCodeForToken(code);
-        } else {
-            // Если всё ещё не определили — спросим пользователя
-            const userChoice = prompt('Выберите сервис:\n1 - Google Drive\n2 - Яндекс.Диск');
-            if (userChoice === '1') {
-                exchangeGoogleCodeForToken(code);
-            } else if (userChoice === '2') {
-                exchangeYandexCodeForToken(code);
-            } else {
-                alert('Неверный выбор');
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const service = urlParams.get('service');
+            
+            if (code) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
+                if (service === 'google') {
+                    exchangeGoogleCodeForToken(code);
+                } else if (service === 'yandex') {
+                    exchangeYandexCodeForToken(code);
+                } else {
+                    const userChoice = prompt('Выберите сервис для авторизации:\n1 - Google Drive\n2 - Яндекс.Диск');
+                    if (userChoice === '1') {
+                        exchangeGoogleCodeForToken(code);
+                    } else if (userChoice === '2') {
+                        exchangeYandexCodeForToken(code);
+                    } else {
+                        alert('Неверный выбор');
+                    }
+                }
             }
         }
-    }
-}
 
         function checkAuth() {
             const auth = JSON.parse(localStorage.getItem('nimbus_auth') || 'null');
