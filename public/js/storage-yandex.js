@@ -739,12 +739,47 @@ async function downloadFileAsBlob(fileId) {
         throw new Error('Файл не найден');
     }
     const cleanPath = normalizeYandexPath(item.path);
+    
+    // Получаем прямую ссылку от Яндекс
     const response = await fetch(`${YANDEX_API_URL}/resources/download?path=${encodeURIComponent(cleanPath)}`, {
         headers: { 'Authorization': `OAuth ${accessToken}` }
     });
     const data = await response.json();
-    const downloadResponse = await fetch(data.href);
-    return await downloadResponse.blob();
+    const directUrl = data.href;
+    
+    // Скачиваем через свой прокси (обходим CORS)
+    const proxyUrl = `/fetch-file?url=${encodeURIComponent(directUrl)}`;
+    const proxyResponse = await fetch(proxyUrl);
+    
+    if (!proxyResponse.ok) {
+        throw new Error(`Failed to download via proxy: ${proxyResponse.status}`);
+    }
+    
+    return await proxyResponse.blob();
+}
+
+async function downloadFileAsBlobWithCancel(fileId, signal) {
+    const item = window.allItems?.find(i => i.id === fileId);
+    if (!item) {
+        throw new Error('Файл не найден');
+    }
+    const cleanPath = normalizeYandexPath(item.path);
+    
+    const response = await fetch(`${YANDEX_API_URL}/resources/download?path=${encodeURIComponent(cleanPath)}`, {
+        headers: { 'Authorization': `OAuth ${accessToken}` },
+        signal: signal
+    });
+    const data = await response.json();
+    const directUrl = data.href;
+    
+    const proxyUrl = `/fetch-file?url=${encodeURIComponent(directUrl)}`;
+    const proxyResponse = await fetch(proxyUrl, { signal: signal });
+    
+    if (!proxyResponse.ok) {
+        throw new Error(`Failed to download via proxy: ${proxyResponse.status}`);
+    }
+    
+    return await proxyResponse.blob();
 }
 
 // ========== ИНФОРМАЦИЯ О ХРАНИЛИЩЕ ==========
