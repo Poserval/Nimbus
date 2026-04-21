@@ -2408,7 +2408,8 @@ async function addFolderToZipWithCancel(zip, folderId, folderName, signal, onPro
         if (item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') {
             await addFolderToZipWithCancel(folderZip, item.id, item.name, signal, onProgress, totalSize, processedSize);
         } else {
-            const fileBlob = await downloadFileAsBlob(item.id);
+            // ИСПРАВЛЕНО: используем downloadFileAsBlobWithCancel вместо downloadFileAsBlob
+            const fileBlob = await downloadFileAsBlobWithCancel(item.id, signal);
             folderZip.file(item.name, fileBlob);
             processedSize.current += parseInt(item.size) || 0;
             if (onProgress && totalSize && totalSize > 0) {
