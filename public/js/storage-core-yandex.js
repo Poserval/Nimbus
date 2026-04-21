@@ -2357,6 +2357,7 @@ async function downloadFileAsBlobWithCancel(fileId, signal) {
         path = 'disk:' + path;
     }
     
+    // Получаем прямую ссылку на скачивание от Яндекс
     const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(path)}`, {
         headers: { 'Authorization': `OAuth ${accessToken}` },
         signal: signal
@@ -2364,6 +2365,7 @@ async function downloadFileAsBlobWithCancel(fileId, signal) {
     const data = await response.json();
     const directUrl = data.href;
     
+    // Скачиваем через свой прокси (обходим CORS)
     const proxyUrl = `/fetch-file?url=${encodeURIComponent(directUrl)}`;
     const proxyResponse = await fetch(proxyUrl, { signal: signal });
     
