@@ -535,7 +535,7 @@
             const accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
             const account = accounts.find(acc => acc.email === email && acc.service === cloudType);
             if (!account || !account.refreshToken) return null;
-            const response = await fetch('http://localhost:3000/token', {
+            const response = await fetch('/token', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refresh_token: account.refreshToken, grant_type: 'refresh_token', service: cloudType })
             });
@@ -612,7 +612,7 @@
             const accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
             const account = accounts.find(acc => acc.accessToken === oldToken && acc.service === service);
             if (!account || !account.refreshToken) return null;
-            const response = await fetch('http://localhost:3000/token', {
+            const response = await fetch('/token', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refresh_token: account.refreshToken, grant_type: 'refresh_token', service: service })
             });
@@ -621,6 +621,7 @@
             return null;
         }
 
+        // ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ downloadFileAsBlob С ПРОКСИ ==========
         async function downloadFileAsBlob(sourceService, sourceToken, itemId, itemPath) {
             if (sourceService === 'google') {
                 let response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}?alt=media`, {
@@ -637,6 +638,7 @@
                 }
                 return await response.blob();
             } else {
+                // Яндекс.Диск: получаем прямую ссылку и скачиваем через прокси
                 let response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(itemPath)}`, {
                     headers: { 'Authorization': `OAuth ${sourceToken}` }
                 });
@@ -650,8 +652,15 @@
                     }
                 }
                 const data = await response.json();
-                const downloadResponse = await fetch(data.href);
-                return await downloadResponse.blob();
+                const directUrl = data.href;
+                
+                // Скачиваем через свой прокси (обходим CORS)
+                const proxyUrl = `/fetch-file?url=${encodeURIComponent(directUrl)}`;
+                const proxyResponse = await fetch(proxyUrl);
+                if (!proxyResponse.ok) {
+                    throw new Error(`Failed to download via proxy: ${proxyResponse.status}`);
+                }
+                return await proxyResponse.blob();
             }
         }
 
@@ -659,7 +668,7 @@
             const accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
             const account = accounts.find(acc => acc.accessToken === oldToken && acc.service === service);
             if (!account || !account.refreshToken) return null;
-            const response = await fetch('http://localhost:3000/token', {
+            const response = await fetch('/token', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refresh_token: account.refreshToken, grant_type: 'refresh_token', service: service })
             });
@@ -1644,138 +1653,135 @@
         };
         importInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') importBtn.click(); });
 
-        // ========== ЛИМИТЫ И ЗАМОЧЕК (ИСПРАВЛЕННЫЕ) ==========
-const limitInputElem = document.getElementById('limitInput');
-const limitMinusElem = document.getElementById('limitMinus');
-const limitPlusElem = document.getElementById('limitPlus');
-const limitUnitSpan = document.getElementById('limitUnit');
-const limitLockBtn = document.getElementById('limitLockBtn');
+        // ========== ЛИМИТЫ И ЗАМОЧЕК ==========
+        const limitInputElem = document.getElementById('limitInput');
+        const limitMinusElem = document.getElementById('limitMinus');
+        const limitPlusElem = document.getElementById('limitPlus');
+        const limitUnitSpan = document.getElementById('limitUnit');
+        const limitLockBtn = document.getElementById('limitLockBtn');
 
-function updateLimitDisplay() {
-    if (limitUnit === 'GB') {
-        limitInputElem.value = limitGB;
-        limitUnitSpan.textContent = 'ГБ';
-    } else {
-        limitInputElem.value = (limitGB / 1024).toFixed(2);
-        limitUnitSpan.textContent = 'ТБ';
-    }
-}
+        function updateLimitDisplay() {
+            if (limitUnit === 'GB') {
+                limitInputElem.value = limitGB;
+                limitUnitSpan.textContent = 'ГБ';
+            } else {
+                limitInputElem.value = (limitGB / 1024).toFixed(2);
+                limitUnitSpan.textContent = 'ТБ';
+            }
+        }
 
-function saveLimit() {
-    localStorage.setItem(`limit_${email}`, limitGB);
-    updateStats();
-}
+        function saveLimit() {
+            localStorage.setItem(`limit_${email}`, limitGB);
+            updateStats();
+        }
 
-function loadLimitLockState() {
-    const saved = localStorage.getItem(`nimbus_limit_locked_${email}`);
-    if (!limitLockBtn) return;
-    
-    if (saved === 'true') {
-        isLimitLocked = true;
-        limitLockBtn.classList.add('locked');
-        limitInputElem.disabled = true;
-        if (limitMinusElem) limitMinusElem.disabled = true;
-        if (limitPlusElem) limitPlusElem.disabled = true;
-        if (limitUnitSpan) limitUnitSpan.classList.add('disabled');
-        const customLimit = localStorage.getItem(`nimbus_custom_limit_${email}`);
-        if (customLimit) {
-            limitGB = parseFloat(customLimit);
+        function loadLimitLockState() {
+            const saved = localStorage.getItem(`nimbus_limit_locked_${email}`);
+            if (!limitLockBtn) return;
+            
+            if (saved === 'true') {
+                isLimitLocked = true;
+                limitLockBtn.classList.add('locked');
+                limitInputElem.disabled = true;
+                if (limitMinusElem) limitMinusElem.disabled = true;
+                if (limitPlusElem) limitPlusElem.disabled = true;
+                if (limitUnitSpan) limitUnitSpan.classList.add('disabled');
+                const customLimit = localStorage.getItem(`nimbus_custom_limit_${email}`);
+                if (customLimit) {
+                    limitGB = parseFloat(customLimit);
+                    updateLimitDisplay();
+                    saveLimit();
+                }
+            } else {
+                isLimitLocked = false;
+                limitLockBtn.classList.remove('locked');
+                limitInputElem.disabled = false;
+                if (limitMinusElem) limitMinusElem.disabled = false;
+                if (limitPlusElem) limitPlusElem.disabled = false;
+                if (limitUnitSpan) limitUnitSpan.classList.remove('disabled');
+            }
+        }
+
+        function toggleLimitLock() {
+            isLimitLocked = !isLimitLocked;
+            localStorage.setItem(`nimbus_limit_locked_${email}`, isLimitLocked);
+            
+            if (isLimitLocked) {
+                limitLockBtn.classList.add('locked');
+                limitInputElem.disabled = true;
+                if (limitMinusElem) limitMinusElem.disabled = true;
+                if (limitPlusElem) limitPlusElem.disabled = true;
+                if (limitUnitSpan) limitUnitSpan.classList.add('disabled');
+                localStorage.setItem(`nimbus_custom_limit_${email}`, limitGB);
+                alert(`Лимит зафиксирован: ${limitUnit === 'GB' ? limitGB + ' ГБ' : (limitGB / 1024).toFixed(2) + ' ТБ'}`);
+            } else {
+                limitLockBtn.classList.remove('locked');
+                limitInputElem.disabled = false;
+                if (limitMinusElem) limitMinusElem.disabled = false;
+                if (limitPlusElem) limitPlusElem.disabled = false;
+                if (limitUnitSpan) limitUnitSpan.classList.remove('disabled');
+                alert('Лимит разблокирован. Будет автоматически определён при следующем обновлении');
+                updateStats();
+            }
+        }
+
+        function changeLimit(delta) {
+            if (isLimitLocked) {
+                alert('Лимит зафиксирован. Нажмите на замочек для разблокировки');
+                return;
+            }
+            let newVal = limitGB + delta;
+            if (newVal < 1) newVal = 1;
+            limitGB = newVal;
             updateLimitDisplay();
             saveLimit();
         }
-    } else {
-        isLimitLocked = false;
-        limitLockBtn.classList.remove('locked');
-        limitInputElem.disabled = false;
-        if (limitMinusElem) limitMinusElem.disabled = false;
-        if (limitPlusElem) limitPlusElem.disabled = false;
-        if (limitUnitSpan) limitUnitSpan.classList.remove('disabled');
-    }
-}
 
-function toggleLimitLock() {
-    isLimitLocked = !isLimitLocked;
-    localStorage.setItem(`nimbus_limit_locked_${email}`, isLimitLocked);
-    
-    if (isLimitLocked) {
-        limitLockBtn.classList.add('locked');
-        limitInputElem.disabled = true;
-        if (limitMinusElem) limitMinusElem.disabled = true;
-        if (limitPlusElem) limitPlusElem.disabled = true;
-        if (limitUnitSpan) limitUnitSpan.classList.add('disabled');
-        localStorage.setItem(`nimbus_custom_limit_${email}`, limitGB);
-        alert(`Лимит зафиксирован: ${limitUnit === 'GB' ? limitGB + ' ГБ' : (limitGB / 1024).toFixed(2) + ' ТБ'}`);
-    } else {
-        limitLockBtn.classList.remove('locked');
-        limitInputElem.disabled = false;
-        if (limitMinusElem) limitMinusElem.disabled = false;
-        if (limitPlusElem) limitPlusElem.disabled = false;
-        if (limitUnitSpan) limitUnitSpan.classList.remove('disabled');
-        alert('Лимит разблокирован. Будет автоматически определён при следующем обновлении');
-        updateStats();
-    }
-}
+        function toggleLimitUnit() {
+            if (isLimitLocked) {
+                alert('Лимит зафиксирован. Нажмите на замочек для разблокировки');
+                return;
+            }
+            
+            if (limitUnit === 'GB') {
+                limitUnit = 'TB';
+                limitGB = limitGB / 1024;
+                limitInputElem.value = limitGB.toFixed(2);
+                limitUnitSpan.textContent = 'ТБ';
+            } else {
+                limitUnit = 'GB';
+                limitGB = limitGB * 1024;
+                limitInputElem.value = Math.round(limitGB);
+                limitUnitSpan.textContent = 'ГБ';
+            }
+            saveLimit();
+        }
 
-function changeLimit(delta) {
-    if (isLimitLocked) {
-        alert('Лимит зафиксирован. Нажмите на замочек для разблокировки');
-        return;
-    }
-    let newVal = limitGB + delta;
-    if (newVal < 1) newVal = 1;
-    limitGB = newVal;
-    updateLimitDisplay();
-    saveLimit();
-}
+        function handleLimitInputChange() {
+            if (isLimitLocked) {
+                alert('Лимит зафиксирован. Нажмите на замочек для разблокировки');
+                updateLimitDisplay();
+                return;
+            }
+            let val = parseFloat(limitInputElem.value);
+            if (isNaN(val)) val = 15;
+            if (limitUnit === 'GB') {
+                limitGB = val;
+            } else {
+                limitGB = val * 1024;
+            }
+            if (limitGB < 1) limitGB = 1;
+            updateLimitDisplay();
+            saveLimit();
+        }
 
-function toggleLimitUnit() {
-    if (isLimitLocked) {
-        alert('Лимит зафиксирован. Нажмите на замочек для разблокировки');
-        return;
-    }
-    
-    if (limitUnit === 'GB') {
-        // Переключаем с ГБ на ТБ
-        limitUnit = 'TB';
-        limitGB = limitGB / 1024;
-        limitInputElem.value = limitGB.toFixed(2);
-        limitUnitSpan.textContent = 'ТБ';
-    } else {
-        // Переключаем с ТБ на ГБ
-        limitUnit = 'GB';
-        limitGB = limitGB * 1024;
-        limitInputElem.value = Math.round(limitGB);
-        limitUnitSpan.textContent = 'ГБ';
-    }
-    saveLimit();
-}
+        if (limitMinusElem) limitMinusElem.onclick = () => changeLimit(-1);
+        if (limitPlusElem) limitPlusElem.onclick = () => changeLimit(1);
+        if (limitInputElem) limitInputElem.onchange = handleLimitInputChange;
+        if (limitUnitSpan) limitUnitSpan.onclick = toggleLimitUnit;
+        if (limitLockBtn) limitLockBtn.onclick = toggleLimitLock;
 
-function handleLimitInputChange() {
-    if (isLimitLocked) {
-        alert('Лимит зафиксирован. Нажмите на замочек для разблокировки');
-        updateLimitDisplay();
-        return;
-    }
-    let val = parseFloat(limitInputElem.value);
-    if (isNaN(val)) val = 15;
-    if (limitUnit === 'GB') {
-        limitGB = val;
-    } else {
-        limitGB = val * 1024;
-    }
-    if (limitGB < 1) limitGB = 1;
-    updateLimitDisplay();
-    saveLimit();
-}
-
-// Привязываем обработчики
-if (limitMinusElem) limitMinusElem.onclick = () => changeLimit(-1);
-if (limitPlusElem) limitPlusElem.onclick = () => changeLimit(1);
-if (limitInputElem) limitInputElem.onchange = handleLimitInputChange;
-if (limitUnitSpan) limitUnitSpan.onclick = toggleLimitUnit;
-if (limitLockBtn) limitLockBtn.onclick = toggleLimitLock;
-
-loadLimitLockState();
+        loadLimitLockState();
 
         // ========== ВИД И СОРТИРОВКА ==========
         document.getElementById('viewListBtn').onclick = () => { currentView = 'list'; applySortAndRender(); };
