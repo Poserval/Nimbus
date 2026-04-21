@@ -338,9 +338,7 @@ function updateBreadcrumb() {
     if (isTrashMode) {
         headerCenter.innerHTML = `<span id="trashBadge" class="trash-badge" style="display: inline-block;">Корзина</span>`;
     } else {
-        // Получаем имя пользователя из email
         let userDisplayName = email ? email.split('@')[0] : '';
-        // Ограничиваем длину имени
         if (userDisplayName.length > 20) {
             userDisplayName = userDisplayName.substring(0, 17) + '...';
         }
@@ -1398,6 +1396,7 @@ async function downloadFile(fileId, fileName) {
     }
 }
 
+// ========== ИСПРАВЛЕННЫЕ ФУНКЦИИ СКАЧИВАНИЯ (С ПРОКСИ) ==========
 async function downloadFileAsBlob(fileId) {
     const item = allItems.find(i => i.id === fileId);
     if (!item) throw new Error('Файл не найден');
@@ -1407,16 +1406,40 @@ async function downloadFileAsBlob(fileId) {
         path = 'disk:' + path;
     }
     
-    // Получаем прямую ссылку на скачивание от Яндекс
     const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(path)}`, {
         headers: { 'Authorization': `OAuth ${accessToken}` }
     });
     const data = await response.json();
     const directUrl = data.href;
     
-    // Скачиваем через свой прокси (обходим CORS)
     const proxyUrl = `/fetch-file?url=${encodeURIComponent(directUrl)}`;
     const proxyResponse = await fetch(proxyUrl);
+    
+    if (!proxyResponse.ok) {
+        throw new Error(`Failed to download via proxy: ${proxyResponse.status}`);
+    }
+    
+    return await proxyResponse.blob();
+}
+
+async function downloadFileAsBlobWithCancel(fileId, signal) {
+    const item = allItems.find(i => i.id === fileId);
+    if (!item) throw new Error('Файл не найден');
+    
+    let path = item.path;
+    if (!path.startsWith('disk:')) {
+        path = 'disk:' + path;
+    }
+    
+    const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(path)}`, {
+        headers: { 'Authorization': `OAuth ${accessToken}` },
+        signal: signal
+    });
+    const data = await response.json();
+    const directUrl = data.href;
+    
+    const proxyUrl = `/fetch-file?url=${encodeURIComponent(directUrl)}`;
+    const proxyResponse = await fetch(proxyUrl, { signal: signal });
     
     if (!proxyResponse.ok) {
         throw new Error(`Failed to download via proxy: ${proxyResponse.status}`);
@@ -2347,52 +2370,7 @@ async function loadItems() {
     }
 }
 
-// ========== ФУНКЦИИ ДЛЯ АРХИВИРОВАНИЯ ==========
-async function downloadFileAsBlobWithCancel(fileId, signal) {
-    const item = allItems.find(i => i.id === fileId);
-    if (!item) throw new Error('Файл не найден');
-    
-    let path = item.path;
-    if (!path.startsWith('disk:')) {
-        path = 'disk:' + path;
-    }
-    
-    // Получаем прямую ссылку на скачивание от Яндекс
-    const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(path)}`, {
-        headers: { 'Authorization': `OAuth ${accessToken}` },
-        signal: signal
-    });
-    const data = await response.json();
-    const directUrl = data.href;
-    
-    // Скачиваем через свой прокси (обходим CORS)
-    const proxyUrl = `/fetch-file?url=${encodeURIComponent(directUrl)}`;
-    const proxyResponse = await fetch(proxyUrl, { signal: signal });
-    
-    if (!proxyResponse.ok) {
-        throw new Error(`Failed to download via proxy: ${proxyResponse.status}`);
-    }
-    
-    return await proxyResponse.blob();
-}
-
-async function downloadFileAsBlob(fileId) {
-    const item = allItems.find(i => i.id === fileId);
-    if (!item) throw new Error('Файл не найден');
-    
-    let path = item.path;
-    if (!path.startsWith('disk:')) {
-        path = 'disk:' + path;
-    }
-    
-    const response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(path)}`, {
-        headers: { 'Authorization': `OAuth ${accessToken}` }
-    });
-    const data = await response.json();
-    const downloadResponse = await fetch(data.href);
-    return await downloadResponse.blob();
-}
-
+// ========== ФУНКЦИИ ДЛЯ АРХИВИРОВАНИЯ (С ИСПРАВЛЕННЫМИ ВЫЗОВАМИ) ==========
 async function addFolderToZipWithCancel(zip, folderId, folderName, signal, onProgress, totalSize, processedSize) {
     if (signal && signal.aborted) throw new Error('Cancelled');
     
@@ -2408,7 +2386,7 @@ async function addFolderToZipWithCancel(zip, folderId, folderName, signal, onPro
         if (item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') {
             await addFolderToZipWithCancel(folderZip, item.id, item.name, signal, onProgress, totalSize, processedSize);
         } else {
-            // ИСПРАВЛЕНО: используем downloadFileAsBlobWithCancel вместо downloadFileAsBlob
+            // ИСПРАВЛЕНО: используем downloadFileAsBlobWithCancel
             const fileBlob = await downloadFileAsBlobWithCancel(item.id, signal);
             folderZip.file(item.name, fileBlob);
             processedSize.current += parseInt(item.size) || 0;
@@ -2457,7 +2435,7 @@ async function archiveAndDownloadWithProgress(items) {
             if (item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') {
                 await addFolderToZipWithCancel(zip, item.id, item.name, abortController.signal, updateProgress, totalSize, processedSize);
             } else {
-                const fileBlob = await downloadFileAsBlob(item.id);
+                const fileBlob = await downloadFileAsBlobWithCancel(item.id, abortController.signal);
                 zip.file(item.name, fileBlob);
                 processedSize.current += parseInt(item.size) || 0;
                 if (totalSize > 0) {
@@ -2530,7 +2508,7 @@ async function archiveAndSaveWithProgress(items) {
             if (item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') {
                 await addFolderToZipWithCancel(zip, item.id, item.name, abortController.signal, updateProgress, totalSize, processedSize);
             } else {
-                const fileBlob = await downloadFileAsBlob(item.id);
+                const fileBlob = await downloadFileAsBlobWithCancel(item.id, abortController.signal);
                 zip.file(item.name, fileBlob);
                 processedSize.current += parseInt(item.size) || 0;
                 if (totalSize > 0) {
@@ -2626,7 +2604,7 @@ async function archiveAndShareWithProgress(items, targetToken, targetName, targe
             if (item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') {
                 await addFolderToZipWithCancel(zip, item.id, item.name, abortController.signal, updateProgress, totalSize, processedSize);
             } else {
-                const fileBlob = await downloadFileAsBlob(item.id);
+                const fileBlob = await downloadFileAsBlobWithCancel(item.id, abortController.signal);
                 zip.file(item.name, fileBlob);
                 processedSize.current += parseInt(item.size) || 0;
                 if (totalSize > 0) {
@@ -3712,18 +3690,16 @@ if (savedLimit) {
 }
 
 loadAssociations();
-initRealLimit();  // ← ДОБАВИТЬ ЭТУ СТРОКУ
+initRealLimit();
 updateSortArrows();
 updateViewMenuActive();
 updateHeaderButtonsState();
-updateBreadcrumb();  // ← ДОБАВИТЬ ЭТУ СТРОКУ
+updateBreadcrumb();
 
-// Вызываем обновление хлебных крошек после загрузки
 setTimeout(() => {
     updateBreadcrumbNavigation();
 }, 100);
 
-// Добавляем алиасы для совместимости
 window.loadItems = loadItems;
 window.loadYandexItems = loadItems;
 window.showTrashMode = showTrashMode;
@@ -3731,7 +3707,6 @@ window.showYandexTrashMode = showTrashMode;
 window.getItems = getItems;
 window.getYandexItems = getItems;
 
-// Добавляем глобальные стили для курсоров
 const style = document.createElement('style');
 style.textContent = `
     * { cursor: default; }
@@ -3745,7 +3720,6 @@ style.textContent = `
     .disabled, .action-btn.disabled { cursor: not-allowed !important; opacity: 0.5; }
     .file-list-item, .file-grid-item { cursor: default; }
     
-    /* Стили для хлебных крошек */
     .breadcrumb-container {
         padding: 4px 16px;
         margin-bottom: 8px;
@@ -3783,7 +3757,6 @@ style.textContent = `
         font-weight: 500;
     }
     
-    /* Стили для типа файла */
     .file-type-label {
         font-size: 12px;
         color: #666;
@@ -3800,4 +3773,4 @@ style.textContent = `
 document.head.appendChild(style);
 
 window.allItems = allItems;
-console.log('storage-core-yandex.js fully loaded');
+console.log('storage-core-yandex.js fully loaded - with CORS fix via proxy');
