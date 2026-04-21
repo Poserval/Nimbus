@@ -1399,8 +1399,6 @@ async function downloadFile(fileId, fileName) {
 }
 
 async function downloadFileAsBlob(fileId) {
-console.log('❌❌❌ ВЫЗВАНА СТАРАЯ downloadFileAsBlob! СРОЧНО ИСПРАВИТЬ ❌❌❌');
-    const item = allItems.find(i => i.id === fileId);
     const item = allItems.find(i => i.id === fileId);
     if (!item) throw new Error('Файл не найден');
     
@@ -2351,7 +2349,6 @@ async function loadItems() {
 
 // ========== ФУНКЦИИ ДЛЯ АРХИВИРОВАНИЯ ==========
 async function downloadFileAsBlobWithCancel(fileId, signal) {
-console.log('✅✅✅ ВЫЗВАНА НОВАЯ downloadFileAsBlobWithCancel ✅✅✅');
     const item = allItems.find(i => i.id === fileId);
     if (!item) throw new Error('Файл не найден');
     
@@ -2409,7 +2406,7 @@ async function addFolderToZipWithCancel(zip, folderId, folderName, signal, onPro
         if (item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') {
             await addFolderToZipWithCancel(folderZip, item.id, item.name, signal, onProgress, totalSize, processedSize);
         } else {
-            const fileBlob = await downloadFileAsBlobWithCancel(item.id, signal);
+            const fileBlob = await downloadFileAsBlob(item.id);
             folderZip.file(item.name, fileBlob);
             processedSize.current += parseInt(item.size) || 0;
             if (onProgress && totalSize && totalSize > 0) {
@@ -2434,20 +2431,38 @@ async function archiveAndDownloadWithProgress(items) {
         let totalSize = 0;
         
         for (const item of items) {
-    if (abortController.signal.aborted) throw new Error('Cancelled');
-    
-    if (item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') {
-        await addFolderToZipWithCancel(zip, item.id, item.name, abortController.signal, updateProgress, totalSize, processedSize);
-    } else {
-        const fileBlob = await downloadFileAsBlobWithCancel(item.id, abortController.signal);
-        zip.file(item.name, fileBlob);
-        processedSize.current += parseInt(item.size) || 0;
-        if (totalSize > 0) {
-            const percent = Math.min(100, Math.round((processedSize.current / totalSize) * 100));
-            updateProgress(percent);
+            if (abortController.signal.aborted) throw new Error('Cancelled');
+            if (item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') {
+                totalSize += await getFolderSize(item.path);
+            } else {
+                totalSize += parseInt(item.size) || 0;
+            }
         }
-    }
-}
+        
+        let processedSize = { current: 0 };
+        
+        const updateProgress = (percent) => {
+            if (globalProgress) {
+                globalProgress.percent = percent;
+                renderItemsList(allItems);
+            }
+        };
+        
+        for (const item of items) {
+            if (abortController.signal.aborted) throw new Error('Cancelled');
+            
+            if (item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') {
+                await addFolderToZipWithCancel(zip, item.id, item.name, abortController.signal, updateProgress, totalSize, processedSize);
+            } else {
+                const fileBlob = await downloadFileAsBlob(item.id);
+                zip.file(item.name, fileBlob);
+                processedSize.current += parseInt(item.size) || 0;
+                if (totalSize > 0) {
+                    const percent = Math.min(100, Math.round((processedSize.current / totalSize) * 100));
+                    updateProgress(percent);
+                }
+            }
+        }
         
         const content = await zip.generateAsync({ type: 'blob' });
         const url = URL.createObjectURL(content);
