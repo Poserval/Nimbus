@@ -2431,38 +2431,20 @@ async function archiveAndDownloadWithProgress(items) {
         let totalSize = 0;
         
         for (const item of items) {
-            if (abortController.signal.aborted) throw new Error('Cancelled');
-            if (item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') {
-                totalSize += await getFolderSize(item.path);
-            } else {
-                totalSize += parseInt(item.size) || 0;
-            }
+    if (abortController.signal.aborted) throw new Error('Cancelled');
+    
+    if (item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') {
+        await addFolderToZipWithCancel(zip, item.id, item.name, abortController.signal, updateProgress, totalSize, processedSize);
+    } else {
+        const fileBlob = await downloadFileAsBlobWithCancel(item.id, abortController.signal);
+        zip.file(item.name, fileBlob);
+        processedSize.current += parseInt(item.size) || 0;
+        if (totalSize > 0) {
+            const percent = Math.min(100, Math.round((processedSize.current / totalSize) * 100));
+            updateProgress(percent);
         }
-        
-        let processedSize = { current: 0 };
-        
-        const updateProgress = (percent) => {
-            if (globalProgress) {
-                globalProgress.percent = percent;
-                renderItemsList(allItems);
-            }
-        };
-        
-        for (const item of items) {
-            if (abortController.signal.aborted) throw new Error('Cancelled');
-            
-            if (item.mimeType === 'application/vnd.yandex.folder' || item.type === 'dir') {
-                await addFolderToZipWithCancel(zip, item.id, item.name, abortController.signal, updateProgress, totalSize, processedSize);
-            } else {
-                const fileBlob = await downloadFileAsBlob(item.id);
-                zip.file(item.name, fileBlob);
-                processedSize.current += parseInt(item.size) || 0;
-                if (totalSize > 0) {
-                    const percent = Math.min(100, Math.round((processedSize.current / totalSize) * 100));
-                    updateProgress(percent);
-                }
-            }
-        }
+    }
+}
         
         const content = await zip.generateAsync({ type: 'blob' });
         const url = URL.createObjectURL(content);
