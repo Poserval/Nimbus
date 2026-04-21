@@ -1399,6 +1399,8 @@ async function downloadFile(fileId, fileName) {
 }
 
 async function downloadFileAsBlob(fileId) {
+console.log('❌❌❌ ВЫЗВАНА СТАРАЯ downloadFileAsBlob! СРОЧНО ИСПРАВИТЬ ❌❌❌');
+    const item = allItems.find(i => i.id === fileId);
     const item = allItems.find(i => i.id === fileId);
     if (!item) throw new Error('Файл не найден');
     
@@ -2349,6 +2351,7 @@ async function loadItems() {
 
 // ========== ФУНКЦИИ ДЛЯ АРХИВИРОВАНИЯ ==========
 async function downloadFileAsBlobWithCancel(fileId, signal) {
+console.log('✅✅✅ ВЫЗВАНА НОВАЯ downloadFileAsBlobWithCancel ✅✅✅');
     const item = allItems.find(i => i.id === fileId);
     if (!item) throw new Error('Файл не найден');
     
