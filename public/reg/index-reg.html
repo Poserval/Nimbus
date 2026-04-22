@@ -80,9 +80,6 @@
         const PROXY_URL = CONFIG.PROXY_URL;
         const REDIRECT_URI = CONFIG.GOOGLE_REDIRECT_URI;
 
-        // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-        // escapeHtml уже есть в nimbus-common.js, не дублируем
-
         // ========== РАБОТА С ПОЛЬЗОВАТЕЛЯМИ ==========
         function getUsers() {
             return JSON.parse(localStorage.getItem('nimbus_users') || '{}');
@@ -145,9 +142,77 @@
             return true;
         }
 
-        // ========== OAuth (используем функции из config.js) ==========
+        // ========== OAuth ДЛЯ GOOGLE ==========
+        async function exchangeGoogleCodeForToken(code) {
+            try {
+                const response = await fetch(PROXY_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, service: 'google' })
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.access_token) {
+                    const userInfo = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+                        headers: { Authorization: `Bearer ${data.access_token}` }
+                    });
+                    const user = await userInfo.json();
+                    
+                    // Сохраняем сессию
+                    localStorage.setItem('nimbus_auth', JSON.stringify({
+                        email: user.email,
+                        name: user.name || user.email.split('@')[0],
+                        expires: Date.now() + 30 * 24 * 60 * 60 * 1000
+                    }));
+                    
+                    alert(`Добро пожаловать, ${user.name || user.email}!`);
+                    window.location.href = '../index.html';
+                } else {
+                    alert('Ошибка авторизации Google: ' + (data.error || 'неизвестная ошибка'));
+                }
+            } catch (err) {
+                console.error('Google auth error:', err);
+                alert('Ошибка соединения: ' + err.message);
+            }
+        }
+
         function startGoogleAuth() {
             window.location.href = getGoogleAuthUrl();
+        }
+
+        // ========== OAuth ДЛЯ ЯНДЕКСА ==========
+        async function exchangeYandexCodeForToken(code) {
+            try {
+                const response = await fetch(PROXY_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, service: 'yandex' })
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.access_token) {
+                    const userInfo = await fetch('https://login.yandex.ru/info', {
+                        headers: { Authorization: `OAuth ${data.access_token}` }
+                    });
+                    const user = await userInfo.json();
+                    const userEmail = user.default_email || `${user.login}@yandex.ru`;
+                    
+                    // Сохраняем сессию
+                    localStorage.setItem('nimbus_auth', JSON.stringify({
+                        email: userEmail,
+                        name: user.login,
+                        expires: Date.now() + 30 * 24 * 60 * 60 * 1000
+                    }));
+                    
+                    alert(`Добро пожаловать, ${user.login}!`);
+                    window.location.href = '../index.html';
+                } else {
+                    alert('Ошибка авторизации Яндекса: ' + (data.error || 'неизвестная ошибка'));
+                }
+            } catch (err) {
+                console.error('Yandex auth error:', err);
+                alert('Ошибка соединения: ' + err.message);
+            }
         }
 
         function startYandexAuth() {
@@ -175,10 +240,35 @@
         function checkAuth() {
             const auth = JSON.parse(localStorage.getItem('nimbus_auth') || 'null');
             if (auth && auth.expires > Date.now()) {
-                // Если уже авторизован, можно предложить перейти на главную
                 const goToMain = confirm('Вы уже авторизованы. Перейти на главный экран?');
                 if (goToMain) {
                     window.location.href = '../index.html';
+                }
+            }
+        }
+
+        // ========== ОБРАБОТКА РЕДИРЕКТА ПОСЛЕ OAuth ==========
+        function handleOAuthRedirect() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const service = urlParams.get('service');
+            
+            if (code) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
+                if (service === 'google') {
+                    exchangeGoogleCodeForToken(code);
+                } else if (service === 'yandex') {
+                    exchangeYandexCodeForToken(code);
+                } else {
+                    const userChoice = prompt('Выберите сервис для авторизации:\n1 - Google Drive\n2 - Яндекс.Диск');
+                    if (userChoice === '1') {
+                        exchangeGoogleCodeForToken(code);
+                    } else if (userChoice === '2') {
+                        exchangeYandexCodeForToken(code);
+                    } else {
+                        alert('Неверный выбор');
+                    }
                 }
             }
         }
@@ -187,6 +277,7 @@
         function init() {
             initTabs();
             checkAuth();
+            handleOAuthRedirect();
             
             document.getElementById('doRegisterBtn').onclick = () => {
                 const name = document.getElementById('regName').value;
