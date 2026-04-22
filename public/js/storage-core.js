@@ -1,13 +1,11 @@
-// ========== storage-core.js ==========
-// Google Drive модуль
-// Версия 3.0 - исправлена ошибка renameItem (дублирование расширения)
-// Добавлены недостающие функции loadItems, getItems, getFolderSize, getFolderFileCount
+// ========== storage-core.js (GOOGLE DRIVE) ==========
+// Полностью переработан на основе рабочей версии Яндекс.Диска
+// Версия 3.0 - добавлены недостающие функции, исправлена работа с прокси
 
 // ========== ОБЩИЕ ПЕРЕМЕННЫЕ ==========
-const PROXY_URL = 'http://localhost:3000/token';
-const urlParams = new URLSearchParams(window.location.search);
-let accessToken = urlParams.get('token');
-const email = urlParams.get('email');
+const PROXY_URL = '/token';
+let accessToken = new URLSearchParams(window.location.search).get('token');
+const email = new URLSearchParams(window.location.search).get('email');
 let allItems = [];
 let usedBytes = 0;
 let limitGB = 15;
@@ -23,16 +21,12 @@ let activeProgress = {};
 let abortControllers = {};
 let globalProgress = null;
 
-// ========== ПЕРЕМЕННЫЕ ДЛЯ ПРОСМОТРА ИЗОБРАЖЕНИЙ ==========
+// ========== ПЕРЕМЕННЫЕ ДЛЯ ПРОСМОТРА ==========
 let currentImageIndex = 0;
 let currentImageList = [];
-
-// ========== ПЕРЕМЕННЫЕ ДЛЯ ПРОСМОТРА ZIP ==========
 let currentZipFiles = [];
 let currentZipName = '';
 let currentZipBlob = null;
-
-// ========== ПЕРЕМЕННЫЕ ДЛЯ АУДИО/ВИДЕО ПЛЕЕРА ==========
 let currentMediaIndex = 0;
 let currentMediaList = [];
 let currentMediaPlayer = null;
@@ -50,35 +44,6 @@ let limitUnit = 'GB';
 let fileAssociations = {};
 
 // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-
-function getFileTypeLabel(extension) {
-    const ext = extension.toLowerCase();
-    
-    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'ico', 'svg'];
-    if (imageExts.includes(ext)) return 'Изображение';
-    
-    const videoExts = ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v'];
-    if (videoExts.includes(ext)) return 'Видео';
-    
-    const audioExts = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'opus'];
-    if (audioExts.includes(ext)) return 'Аудио';
-    
-    const docExts = ['doc', 'docx', 'txt', 'rtf', 'odt', 'md'];
-    if (docExts.includes(ext)) return 'Текст';
-    
-    if (ext === 'pdf') return 'PDF';
-    
-    const sheetExts = ['xls', 'xlsx', 'csv', 'ods'];
-    if (sheetExts.includes(ext)) return 'Таблица';
-    
-    const presExts = ['ppt', 'pptx', 'odp'];
-    if (presExts.includes(ext)) return 'Презентация';
-    
-    const archiveExts = ['zip', 'rar', '7z', 'tar', 'gz'];
-    if (archiveExts.includes(ext)) return 'Архив';
-    
-    return 'Файл';
-}
 
 function loadAssociations() {
     const saved = localStorage.getItem(`nimbus_associations_${email}`);
@@ -102,6 +67,12 @@ function setAssociation(extension, action) {
 
 function getAssociation(extension) {
     return fileAssociations[extension.toLowerCase()];
+}
+
+function getBaseFileName(fullName) {
+    const lastDot = fullName.lastIndexOf('.');
+    if (lastDot === -1) return { name: fullName, ext: '' };
+    return { name: fullName.substring(0, lastDot), ext: fullName.substring(lastDot) };
 }
 
 function getColorForPercent(percent) {
@@ -181,104 +152,6 @@ function updateViewMenuActive() {
     if (activeItem) activeItem.classList.add('active');
 }
 
-function getBaseFileName(fullName) {
-    const lastDot = fullName.lastIndexOf('.');
-    if (lastDot === -1) return { name: fullName, ext: '' };
-    return { name: fullName.substring(0, lastDot), ext: fullName.substring(lastDot) };
-}
-
-function formatFileSize(bytes) {
-    if (!bytes) return '—';
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-}
-
-function formatDate(dateString) {
-    if (!dateString) return '—';
-    const date = new Date(dateString);
-    return date.toLocaleString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
-}
-
-function getFileExtension(filename) {
-    const lastDot = filename.lastIndexOf('.');
-    if (lastDot === -1) return '';
-    return filename.substring(lastDot + 1).toUpperCase();
-}
-
-function getItemIcon(item) {
-    if (item.mimeType === 'application/vnd.google-apps.folder') return '📁';
-    const ext = item.name.split('.').pop().toLowerCase();
-    if (item.mimeType.includes('image') || ['jpg','jpeg','png','gif','webp','bmp'].includes(ext)) return '🖼️';
-    if (item.mimeType.includes('pdf') || ext === 'pdf') return '📑';
-    if (item.mimeType.includes('zip') || ['zip','rar','7z','tar','gz'].includes(ext)) return '📦';
-    if (item.mimeType.includes('document') || ['doc','docx','txt','rtf','odt'].includes(ext)) return '📝';
-    if (item.mimeType.includes('spreadsheet') || ['xls','xlsx','csv','ods'].includes(ext)) return '📊';
-    if (item.mimeType.includes('presentation') || ['ppt','pptx','odp'].includes(ext)) return '📽️';
-    if (item.mimeType.includes('video') || ['mp4','avi','mkv','mov','wmv','flv','webm'].includes(ext)) return '🎬';
-    if (item.mimeType.includes('audio') || ['mp3','wav','flac','aac','ogg','m4a'].includes(ext)) return '🎵';
-    return '📄';
-}
-
-function getItemDisplaySize(item) {
-    if (item.mimeType === 'application/vnd.google-apps.folder') {
-        const cachedSize = window.folderSizes?.[item.id];
-        if (cachedSize) return formatFileSize(cachedSize);
-        return '—';
-    }
-    return formatFileSize(item.size);
-}
-
-function isImageFile(filename) {
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.ico', '.svg'];
-    const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
-    return imageExtensions.includes(ext);
-}
-
-function isZipFile(filename) {
-    const zipExtensions = ['.zip'];
-    const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
-    return zipExtensions.includes(ext);
-}
-
-function isAudioFile(filename) {
-    const audioExtensions = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.opus'];
-    const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
-    return audioExtensions.includes(ext);
-}
-
-function isVideoFile(filename) {
-    const videoExtensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v'];
-    const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
-    return videoExtensions.includes(ext);
-}
-
-function isMediaFile(filename) {
-    return isAudioFile(filename) || isVideoFile(filename);
-}
-
-function isPdfFile(filename) {
-    return filename.toLowerCase().endsWith('.pdf');
-}
-
-function isTextFile(filename) {
-    const textExtensions = ['.txt', '.md', '.json', '.xml', '.csv', '.log'];
-    const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
-    return textExtensions.includes(ext);
-}
-
 function updateBreadcrumb() {
     const headerCenter = document.getElementById('headerCenter');
     
@@ -300,6 +173,48 @@ function updateBreadcrumb() {
     }
 }
 
+function updateBreadcrumbNavigation() {
+    const container = document.getElementById('breadcrumbContainer');
+    if (!container) return;
+    
+    if (isTrashMode) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    let html = '';
+    
+    folderPath.forEach((folder, index) => {
+        const isLast = index === folderPath.length - 1;
+        const folderName = folder.name === 'Корень' ? 'Хранилище' : folder.name;
+        
+        if (isLast) {
+            html += `<span class="breadcrumb-current">${escapeHtml(folderName)}</span>`;
+        } else {
+            html += `<a class="breadcrumb-item" data-folder-id="${folder.id}" data-folder-name="${folder.name}">${escapeHtml(folderName)}</a>`;
+            html += `<span class="breadcrumb-separator">›</span>`;
+        }
+    });
+    
+    container.innerHTML = html;
+    
+    container.querySelectorAll('.breadcrumb-item').forEach(link => {
+        link.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const folderId = link.dataset.folderId;
+            
+            const index = folderPath.findIndex(f => f.id === folderId);
+            if (index !== -1) {
+                folderPath = folderPath.slice(0, index + 1);
+                currentFolderId = folderId;
+                updateBreadcrumb();
+                updateBreadcrumbNavigation();
+                await loadItems();
+            }
+        });
+    });
+}
+
 async function enterFolder(folderId, folderName) {
     currentFolderId = folderId;
     folderPath.push({ id: folderId, name: folderName });
@@ -318,7 +233,8 @@ async function goBack() {
     }
 }
 
-// ========== ПОЛУЧЕНИЕ СПИСКА ФАЙЛОВ ИЗ GOOGLE DRIVE ==========
+// ========== ФУНКЦИИ ДЛЯ РАБОТЫ С ФАЙЛАМИ (API) ==========
+
 async function getItems(folderId = 'root') {
     let all = [];
     let pageToken = '';
@@ -331,7 +247,40 @@ async function getItems(folderId = 'root') {
                 url += ` and 'root' in parents`;
             }
             if (pageToken) url += `&pageToken=${pageToken}`;
+            let response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
             
+            if (response.status === 401) {
+                const newToken = await refreshAccessToken();
+                if (newToken) {
+                    accessToken = newToken;
+                    response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+                } else {
+                    throw new Error('Token expired');
+                }
+            }
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            if (data.files && data.files.length > 0) {
+                all = all.concat(data.files);
+            }
+            if (data.nextPageToken) pageToken = data.nextPageToken;
+            else break;
+        }
+    } catch (err) {
+        console.error('API Error:', err);
+        throw err;
+    }
+    return all;
+}
+
+async function getTrashFiles() {
+    let all = [];
+    let pageToken = '';
+    try {
+        while (true) {
+            let url = `https://www.googleapis.com/drive/v3/files?fields=files(id,name,size,mimeType,createdTime,modifiedTime)&pageSize=1000&q=trashed=true`;
+            if (pageToken) url += `&pageToken=${pageToken}`;
             let response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
             
             if (response.status === 401) {
@@ -364,7 +313,7 @@ async function getFolderSize(folderId) {
     let pageToken = '';
     try {
         while (true) {
-            let url = `https://www.googleapis.com/drive/v3/files?fields=files(id,name,size,mimeType)&pageSize=1000&q='${folderId}'+in+parents+and+trashed=false`;
+            let url = `https://www.googleapis.com/drive/v3/files?fields=files(id,name,size,mimeType)&pageSize=1000&q='${folderId}' in parents and trashed=false`;
             if (pageToken) url += `&pageToken=${pageToken}`;
             let response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
             
@@ -403,7 +352,7 @@ async function getFolderFileCount(folderId) {
     let pageToken = '';
     try {
         while (true) {
-            let url = `https://www.googleapis.com/drive/v3/files?fields=files(id,mimeType)&pageSize=1000&q='${folderId}'+in+parents+and+trashed=false`;
+            let url = `https://www.googleapis.com/drive/v3/files?fields=files(id,name,size,mimeType)&pageSize=1000&q='${folderId}' in parents and trashed=false`;
             if (pageToken) url += `&pageToken=${pageToken}`;
             let response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
             
@@ -435,10 +384,139 @@ async function getFolderFileCount(folderId) {
     return fileCount;
 }
 
-// ========== ФУНКЦИИ ПРОСМОТРА ИЗОБРАЖЕНИЙ ==========
-async function openImageViewer(itemId, itemName) {
+// ========== ФУНКЦИИ ДЛЯ СКАЧИВАНИЯ (С ПРОКСИ, ДЛЯ ОБХОДА CORS) ==========
+
+async function downloadFileAsBlob(fileId) {
+    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    if (response.status === 401) {
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+            accessToken = newToken;
+            const retryResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            return await retryResponse.blob();
+        }
+    }
+    return await response.blob();
+}
+
+async function downloadFileAsBlobWithCancel(fileId, signal) {
+    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+        signal: signal
+    });
+    if (response.status === 401) {
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+            accessToken = newToken;
+            const retryResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                headers: { 'Authorization': `Bearer ${accessToken}` },
+                signal: signal
+            });
+            return await retryResponse.blob();
+        }
+    }
+    return await response.blob();
+}
+
+// ========== ФУНКЦИИ ДЛЯ РАБОТЫ С ФАЙЛАМИ (ОСНОВНЫЕ ОПЕРАЦИИ) ==========
+
+async function renameItem(itemId, oldFullName, newNameWithoutExt, isFolder) {
+    const item = allItems.find(i => i.id === itemId);
+    if (!item) return;
+    
+    let newFullName;
+    if (isFolder) {
+        newFullName = newNameWithoutExt;
+    } else {
+        const originalName = item.name;
+        const lastDot = originalName.lastIndexOf('.');
+        const ext = lastDot !== -1 ? originalName.substring(lastDot) : '';
+        newFullName = newNameWithoutExt + ext;
+    }
+    
     try {
-        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}?alt=media`, {
+        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name: newFullName })
+        });
+        
+        if (response.status === 401) {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                accessToken = newToken;
+                response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: newFullName })
+                });
+            }
+        }
+        
+        if (response.ok) {
+            alert('Переименовано!');
+            await loadItems();
+        } else {
+            alert('Ошибка переименования');
+        }
+    } catch (err) {
+        alert('Ошибка: ' + err.message);
+    }
+}
+
+async function copyFile(fileId, fileName) {
+    const { name, ext } = getBaseFileName(fileName);
+    const newName = name + ' (Копия)' + ext;
+    try {
+        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/copy`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name: newName })
+        });
+        
+        if (response.status === 401) {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                accessToken = newToken;
+                response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/copy`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: newName })
+                });
+            }
+        }
+        
+        if (response.ok) {
+            alert(`Файл "${fileName}" скопирован!`);
+            await loadItems();
+        } else {
+            const errData = await response.json();
+            alert('Ошибка копирования: ' + (errData.error?.message || 'неизвестная ошибка'));
+        }
+    } catch (err) {
+        alert('Ошибка: ' + err.message);
+    }
+}
+
+async function getFileLink(fileId) {
+    try {
+        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=webViewLink`, {
             headers: { 'Authorization': `Bearer ${accessToken}` }
         });
         
@@ -446,7 +524,7 @@ async function openImageViewer(itemId, itemName) {
             const newToken = await refreshAccessToken();
             if (newToken) {
                 accessToken = newToken;
-                response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}?alt=media`, {
+                response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=webViewLink`, {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
             } else {
@@ -454,7 +532,747 @@ async function openImageViewer(itemId, itemName) {
             }
         }
         
-        const blob = await response.blob();
+        const data = await response.json();
+        return data.webViewLink;
+    } catch (err) {
+        console.error('Get link error:', err);
+        throw err;
+    }
+}
+
+async function uploadFile(file, parentFolderId = currentFolderId) {
+    const metadata = { name: file.name, mimeType: file.type, parents: parentFolderId === 'root' ? [] : [parentFolderId] };
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', file);
+    try {
+        let response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${accessToken}` },
+            body: form
+        });
+        
+        if (response.status === 401) {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                accessToken = newToken;
+                response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                    body: form
+                });
+            }
+        }
+        
+        const result = await response.json();
+        if (result.id) {
+            alert(`Файл "${file.name}" загружен!`);
+            await loadItems();
+            return true;
+        } else {
+            alert('Ошибка загрузки');
+            return false;
+        }
+    } catch (err) {
+        alert('Ошибка: ' + err.message);
+        return false;
+    }
+}
+
+async function createFolder(folderName, parentFolderId = currentFolderId) {
+    const metadata = {
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: parentFolderId === 'root' ? [] : [parentFolderId]
+    };
+    try {
+        let response = await fetch('https://www.googleapis.com/drive/v3/files', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(metadata)
+        });
+        
+        if (response.status === 401) {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                accessToken = newToken;
+                response = await fetch('https://www.googleapis.com/drive/v3/files', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(metadata)
+                });
+            }
+        }
+        
+        if (response.ok) {
+            alert(`Папка "${folderName}" создана!`);
+            await loadItems();
+            return true;
+        } else {
+            alert('Ошибка создания папки');
+            return false;
+        }
+    } catch (err) {
+        alert('Ошибка: ' + err.message);
+        return false;
+    }
+}
+
+async function downloadFile(fileId, fileName) {
+    try {
+        const blob = await downloadFileAsBlob(fileId);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        return true;
+    } catch (err) {
+        console.error('Download error:', err);
+        throw err;
+    }
+}
+
+// ========== ФУНКЦИИ КОРЗИНЫ (БЕЗ ВНУТРЕННИХ ALERT) ==========
+
+async function moveToTrash(itemId) {
+    try {
+        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ trashed: true })
+        });
+        
+        if (response.status === 401) {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                accessToken = newToken;
+                response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ trashed: true })
+                });
+            } else {
+                throw new Error('Token expired');
+            }
+        }
+        
+        return response.ok;
+    } catch (err) {
+        console.error('Move to trash error:', err);
+        return false;
+    }
+}
+
+async function restoreFile(fileId) {
+    try {
+        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ trashed: false })
+        });
+        
+        if (response.status === 401) {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                accessToken = newToken;
+                response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ trashed: false })
+                });
+            } else {
+                throw new Error('Token expired');
+            }
+        }
+        
+        return response.ok;
+    } catch (err) {
+        console.error('Restore error:', err);
+        return false;
+    }
+}
+
+async function permanentDeleteFile(fileId) {
+    try {
+        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        
+        if (response.status === 401) {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                accessToken = newToken;
+                response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+            } else {
+                throw new Error('Token expired');
+            }
+        }
+        
+        return response.ok;
+    } catch (err) {
+        console.error('Permanent delete error:', err);
+        return false;
+    }
+}
+
+async function moveMultipleToTrash(items) {
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const item of items) {
+        try {
+            const result = await moveToTrash(item.id);
+            if (result) successCount++;
+            else failCount++;
+        } catch (err) {
+            failCount++;
+        }
+    }
+    
+    if (failCount === 0) {
+        alert(`Удалено в корзину: ${successCount} элементов`);
+    } else {
+        alert(`Удалено: ${successCount}, Ошибок: ${failCount}`);
+    }
+    
+    selectedFiles.clear();
+    updateHeaderButtonsState();
+    await loadItems();
+}
+
+async function restoreMultipleFiles(files) {
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const file of files) {
+        try {
+            const success = await restoreFile(file.id);
+            if (success) successCount++;
+            else failCount++;
+        } catch (err) {
+            failCount++;
+        }
+    }
+    
+    if (failCount === 0) {
+        alert(`Восстановлено: ${successCount} элементов`);
+    } else {
+        alert(`Восстановлено: ${successCount}, Ошибок: ${failCount}`);
+    }
+    
+    selectedFiles.clear();
+    updateHeaderButtonsState();
+    await showTrashMode();
+}
+
+async function permanentDeleteMultipleFiles(files) {
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const file of files) {
+        try {
+            const success = await permanentDeleteFile(file.id);
+            if (success) successCount++;
+            else failCount++;
+        } catch (err) {
+            failCount++;
+        }
+    }
+    
+    if (failCount === 0) {
+        alert(`Удалено навсегда: ${successCount} элементов`);
+    } else {
+        alert(`Удалено: ${successCount}, Ошибок: ${failCount}`);
+    }
+    
+    selectedFiles.clear();
+    updateHeaderButtonsState();
+    await showTrashMode();
+}
+
+async function showTrashMode() {
+    isTrashMode = true;
+    folderPath = [{ id: 'trash', name: 'Корзина' }];
+    updateBreadcrumb();
+    updateBreadcrumbNavigation();
+    
+    const container = document.getElementById('filesContainer');
+    container.innerHTML = '<div class="loading">Загрузка корзины...</div>';
+    
+    try {
+        trashFiles = await getTrashFiles();
+        renderTrashList();
+    } catch (err) {
+        container.innerHTML = `<div class="loading">Ошибка загрузки корзины: ${err.message}</div>`;
+    }
+}
+
+function renderTrashList() {
+    const container = document.getElementById('filesContainer');
+    
+    if (!trashFiles || trashFiles.length === 0) {
+        container.innerHTML = '<div class="loading">Корзина пуста</div>';
+        return;
+    }
+    
+    const sorted = sortItems(trashFiles);
+    
+    if (currentView === 'list') {
+        let html = '<div class="file-list">';
+        for (const file of sorted) {
+            const isChecked = selectedFiles.has(file.id);
+            const displaySize = formatFileSize(file.size);
+            const formattedDate = formatDate(file.modifiedTime || file.createdTime);
+            const fileExt = getFileExtension(file.name);
+            const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+            
+            html += `
+                <div class="file-list-item" data-id="${file.id}">
+                    <div class="file-check">
+                        <input type="checkbox" class="file-checkbox" data-id="${file.id}" ${isChecked ? 'checked' : ''}>
+                    </div>
+                    <div class="file-icon">${getItemIcon(file)}</div>
+                    <div class="file-info">
+                        <div class="file-name-row">
+                            <span class="file-name">${escapeHtml(file.name)}</span>
+                            ${!isFolder ? `<span class="file-type-label"> (${getFileTypeLabel(fileExt)})</span>` : ''}
+                            <span class="file-size">${displaySize}</span>
+                            <span class="file-date">${formattedDate}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+    } else {
+        let html = '<div class="file-grid">';
+        for (const file of sorted) {
+            const isChecked = selectedFiles.has(file.id);
+            const displaySize = formatFileSize(file.size);
+            const formattedDate = formatDate(file.modifiedTime || file.createdTime);
+            const fileExt = getFileExtension(file.name);
+            const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+            
+            html += `
+                <div class="file-grid-item" data-id="${file.id}">
+                    <div class="file-check">
+                        <input type="checkbox" class="file-checkbox" data-id="${file.id}" ${isChecked ? 'checked' : ''}>
+                    </div>
+                    <div class="file-icon">${getItemIcon(file)}</div>
+                    <div class="file-name">${escapeHtml(file.name)}</div>
+                    ${!isFolder ? `<div class="file-type-label"> (${getFileTypeLabel(fileExt)})</div>` : ''}
+                    <div class="file-size">${displaySize}</div>
+                    <div class="file-date">${formattedDate}</div>
+                </div>
+            `;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+    }
+    
+    attachTrashEvents();
+}
+
+function attachTrashEvents() {
+    document.querySelectorAll('.file-checkbox').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+            const fileId = cb.dataset.id;
+            if (cb.checked) {
+                selectedFiles.add(fileId);
+            } else {
+                selectedFiles.delete(fileId);
+            }
+            updateHeaderButtonsState();
+        });
+    });
+}
+
+async function exitTrashMode() {
+    isTrashMode = false;
+    selectedFiles.clear();
+    folderPath = [{ id: 'root', name: 'Корень' }];
+    currentFolderId = 'root';
+    updateBreadcrumb();
+    updateBreadcrumbNavigation();
+    await loadItems();
+}
+
+// ========== ФУНКЦИИ ДЛЯ ПЕРЕМЕЩЕНИЯ ВНУТРИ ХРАНИЛИЩА ==========
+
+async function showMoveToFolderModal() {
+    if (selectedFiles.size === 0) {
+        alert('Выберите элементы для перемещения');
+        return;
+    }
+    
+    moveInsideItems = [];
+    for (const id of selectedFiles) {
+        const item = allItems.find(i => i.id === id);
+        if (item) {
+            moveInsideItems.push(item);
+        }
+    }
+    
+    moveInsideTargetFolderId = currentFolderId;
+    
+    const folders = await getFoldersList();
+    renderMoveToFolderSelect(folders);
+    document.getElementById('moveInsideModal').style.display = 'flex';
+}
+
+async function getFoldersList() {
+    let all = [];
+    let pageToken = '';
+    try {
+        while (true) {
+            let url = `https://www.googleapis.com/drive/v3/files?fields=files(id,name,mimeType)&pageSize=1000&q=mimeType='application/vnd.google-apps.folder' and trashed=false`;
+            if (pageToken) url += `&pageToken=${pageToken}`;
+            let response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+            
+            if (response.status === 401) {
+                const newToken = await refreshAccessToken();
+                if (newToken) {
+                    accessToken = newToken;
+                    response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+                } else {
+                    throw new Error('Token expired');
+                }
+            }
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            if (data.files && data.files.length > 0) {
+                all = all.concat(data.files);
+            }
+            if (data.nextPageToken) pageToken = data.nextPageToken;
+            else break;
+        }
+    } catch (err) {
+        console.error('API Error:', err);
+    }
+    return all;
+}
+
+function renderMoveToFolderSelect(folders) {
+    const body = document.getElementById('moveInsideBody');
+    
+    let html = '<div class="new-folder-input">';
+    html += '<input type="text" id="moveInsideNewFolderName" placeholder="Название новой папки">';
+    html += '<button id="moveInsideCreateFolderBtn">Создать</button>';
+    html += '</div>';
+    
+    if (!folders || folders.length === 0) {
+        html += '<div class="loading">Папки не найдены</div>';
+    } else {
+        folders.forEach(folder => {
+            html += `
+                <div class="folder-item" data-id="${folder.id}">
+                    <div class="folder-icon">📁</div>
+                    <div class="folder-name">${escapeHtml(folder.name)}</div>
+                </div>
+            `;
+        });
+    }
+    
+    html += `
+        <div class="folder-item" data-id="root">
+            <div class="folder-icon">📁</div>
+            <div class="folder-name">Корень (Root)</div>
+        </div>
+    `;
+    
+    body.innerHTML = html;
+    
+    document.querySelectorAll('#moveInsideBody .folder-item').forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll('#moveInsideBody .folder-item').forEach(i => i.style.background = '');
+            item.style.background = '#e8eaf6';
+            moveInsideTargetFolderId = item.dataset.id;
+        });
+    });
+    
+    const createBtn = document.getElementById('moveInsideCreateFolderBtn');
+    if (createBtn) {
+        createBtn.onclick = async () => {
+            const newFolderName = document.getElementById('moveInsideNewFolderName').value.trim();
+            if (!newFolderName) {
+                alert('Введите название папки');
+                return;
+            }
+            try {
+                const newFolderId = await createFolderInCurrent(newFolderName, moveInsideTargetFolderId);
+                alert(`Папка "${newFolderName}" создана!`);
+                document.getElementById('moveInsideNewFolderName').value = '';
+                const updatedFolders = await getFoldersList();
+                renderMoveToFolderSelect(updatedFolders);
+                setTimeout(() => {
+                    const newFolderItem = document.querySelector(`#moveInsideBody .folder-item[data-id="${newFolderId}"]`);
+                    if (newFolderItem) {
+                        document.querySelectorAll('#moveInsideBody .folder-item').forEach(i => i.style.background = '');
+                        newFolderItem.style.background = '#e8eaf6';
+                        moveInsideTargetFolderId = newFolderId;
+                    }
+                }, 100);
+            } catch (err) {
+                alert('Ошибка создания папки: ' + err.message);
+            }
+        };
+    }
+}
+
+async function createFolderInCurrent(folderName, parentId) {
+    const metadata = {
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: parentId === 'root' ? [] : [parentId]
+    };
+    const response = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(metadata)
+    });
+    const data = await response.json();
+    return data.id;
+}
+
+async function moveItemsToFolder(targetFolderId) {
+    if (moveInsideItems.length === 0) return;
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const item of moveInsideItems) {
+        try {
+            const getResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${item.id}?fields=parents`, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const fileData = await getResponse.json();
+            const currentParent = fileData.parents ? fileData.parents[0] : 'root';
+            
+            let url = `https://www.googleapis.com/drive/v3/files/${item.id}`;
+            let addParents = '';
+            let removeParents = '';
+            
+            if (targetFolderId === 'root') {
+                addParents = 'root';
+            } else {
+                addParents = targetFolderId;
+            }
+            
+            if (currentParent && currentParent !== 'root') {
+                removeParents = currentParent;
+            }
+            
+            if (addParents) {
+                url += `?addParents=${addParents}`;
+                if (removeParents) {
+                    url += `&removeParents=${removeParents}`;
+                }
+            }
+            
+            const response = await fetch(url, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
+            
+            if (response.status === 401) {
+                const newToken = await refreshAccessToken();
+                if (newToken) {
+                    accessToken = newToken;
+                    const retryResponse = await fetch(url, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    });
+                    if (!retryResponse.ok) {
+                        const errText = await retryResponse.text();
+                        throw new Error(`HTTP ${retryResponse.status}: ${errText}`);
+                    }
+                } else {
+                    throw new Error('Token expired');
+                }
+            } else if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errText}`);
+            }
+            successCount++;
+        } catch (err) {
+            console.error(`Error moving ${item.name}:`, err);
+            alert(`Ошибка перемещения "${item.name}": ${err.message}`);
+            failCount++;
+        }
+    }
+    
+    if (failCount === 0) {
+        alert(`Перемещено ${successCount} элементов`);
+    } else {
+        alert(`Перемещено: ${successCount}, Ошибок: ${failCount}`);
+    }
+    
+    moveInsideItems = [];
+    selectedFiles.clear();
+    updateHeaderButtonsState();
+    await loadItems();
+}
+
+// ========== ФУНКЦИИ ДЛЯ ПРОСМОТРА ФАЙЛОВ С АССОЦИАЦИЯМИ ==========
+
+async function showProgramChooser(fileItem) {
+    const ext = getFileExtension(fileItem.name).toLowerCase();
+    const fileName = fileItem.name;
+    const fileId = fileItem.id;
+    
+    const modal = document.createElement('div');
+    modal.className = 'share-modal';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="share-modal-content" style="width: 400px;">
+            <h3>Открыть файл "${escapeHtml(fileName)}"</h3>
+            <div class="share-cloud-list" style="margin-bottom: 10px;">
+                <div class="share-cloud-item" data-action="system">
+                    <div class="share-cloud-icon" style="font-size: 32px;">💻</div>
+                    <div class="share-cloud-info">
+                        <div class="share-cloud-name">Системная программа по умолчанию</div>
+                        <div class="share-cloud-email">Открыть в программе, назначенной в системе для .${ext}</div>
+                    </div>
+                </div>
+                <div class="share-cloud-item" data-action="browser">
+                    <div class="share-cloud-icon" style="font-size: 32px;">🌐</div>
+                    <div class="share-cloud-info">
+                        <div class="share-cloud-name">Встроенный просмотр</div>
+                        <div class="share-cloud-email">Если поддерживается браузером</div>
+                    </div>
+                </div>
+                <div class="share-cloud-item" data-action="download">
+                    <div class="share-cloud-icon" style="font-size: 32px;">📥</div>
+                    <div class="share-cloud-info">
+                        <div class="share-cloud-name">Скачать и открыть</div>
+                        <div class="share-cloud-email">Скачать файл и открыть в системе</div>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="rememberChoice" style="width: 18px; height: 18px;">
+                    <span>Запомнить выбор для всех файлов .${ext}</span>
+                </label>
+            </div>
+            <button class="share-cancel-btn" id="programChooserCancelBtn" style="margin-top: 15px;">Отмена</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    const handleChoice = async (action) => {
+        const remember = modal.querySelector('#rememberChoice').checked;
+        if (remember && action !== 'cancel') {
+            setAssociation(ext, action);
+        }
+        modal.remove();
+        
+        if (action === 'system') {
+            await openWithSystemDefault(fileId, fileName);
+        } else if (action === 'browser') {
+            await openInBrowser(fileId, fileName);
+        } else if (action === 'download') {
+            await downloadAndOpen(fileId, fileName);
+        }
+    };
+    
+    modal.querySelectorAll('.share-cloud-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const action = btn.dataset.action;
+            handleChoice(action);
+        });
+    });
+    
+    modal.querySelector('#programChooserCancelBtn').onclick = () => {
+        modal.remove();
+    };
+}
+
+async function openWithSystemDefault(fileId, fileName) {
+    try {
+        await downloadFile(fileId, fileName);
+        alert(`Файл "${fileName}" скачан. Откройте его в папке "Загрузки"`);
+    } catch (err) {
+        alert('Ошибка: ' + err.message);
+    }
+}
+
+async function openInBrowser(fileId, fileName) {
+    try {
+        const blob = await downloadFileAsBlob(fileId);
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (err) {
+        alert('Ошибка: ' + err.message);
+    }
+}
+
+async function downloadAndOpen(fileId, fileName) {
+    await openWithSystemDefault(fileId, fileName);
+}
+
+async function openFileWithAssociation(fileItem) {
+    const fileName = fileItem.name;
+    const fileId = fileItem.id;
+    const ext = getFileExtension(fileName).toLowerCase();
+    
+    const association = getAssociation(ext);
+    
+    if (association === 'system') {
+        await openWithSystemDefault(fileId, fileName);
+    } else if (association === 'browser') {
+        await openInBrowser(fileId, fileName);
+    } else if (association === 'download') {
+        await downloadAndOpen(fileId, fileName);
+    } else {
+        await showProgramChooser(fileItem);
+    }
+}
+
+// ========== ФУНКЦИИ ПРОСМОТРА ИЗОБРАЖЕНИЙ ==========
+async function openImageViewer(itemId, itemName) {
+    try {
+        const blob = await downloadFileAsBlob(itemId);
         const url = URL.createObjectURL(blob);
         
         currentImageList = allItems.filter(item => isImageFile(item.name));
@@ -506,21 +1324,7 @@ async function openImageViewer(itemId, itemName) {
                 titleDiv.innerHTML = `${escapeHtml(newItem.name)} (${currentImageIndex + 1} / ${currentImageList.length})`;
             }
             
-            let newResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${newItem.id}?alt=media`, {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            
-            if (newResponse.status === 401) {
-                const newToken = await refreshAccessToken();
-                if (newToken) {
-                    accessToken = newToken;
-                    newResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${newItem.id}?alt=media`, {
-                        headers: { 'Authorization': `Bearer ${accessToken}` }
-                    });
-                }
-            }
-            
-            const newBlob = await newResponse.blob();
+            const newBlob = await downloadFileAsBlob(newItem.id);
             const newUrl = URL.createObjectURL(newBlob);
             const imgElement = viewerModal.querySelector('#viewerImage');
             const oldUrl = imgElement.src;
@@ -578,23 +1382,8 @@ async function openImageViewer(itemId, itemName) {
 // ========== ФУНКЦИИ ПРОСМОТРА ZIP АРХИВОВ ==========
 async function openZipViewer(itemId, itemName) {
     try {
-        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}?alt=media`, {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}?alt=media`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-            } else {
-                throw new Error('Token expired');
-            }
-        }
-        
-        currentZipBlob = await response.blob();
+        const blob = await downloadFileAsBlob(itemId);
+        currentZipBlob = blob;
         currentZipName = itemName;
         
         const zip = new JSZip();
@@ -729,36 +1518,8 @@ async function extractSingleFileFromZip(fileData) {
     try {
         const fileBlob = await fileData.file.async('blob');
         const fileName = fileData.name;
-        
-        const metadata = {
-            name: fileName,
-            parents: currentFolderId === 'root' ? [] : [currentFolderId]
-        };
-        
-        const formData = new FormData();
-        formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-        formData.append('file', fileBlob, fileName);
-        
-        let response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${accessToken}` },
-            body: formData
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${accessToken}` },
-                    body: formData
-                });
-            }
-        }
-        
-        const result = await response.json();
-        if (result.id) {
+        const uploadSuccess = await uploadFile(new File([fileBlob], fileName), currentFolderId);
+        if (uploadSuccess) {
             alert(`Файл "${fileName}" распакован!`);
             await loadItems();
         } else {
@@ -777,36 +1538,8 @@ async function extractAllFilesFromZip() {
         try {
             const fileBlob = await fileData.file.async('blob');
             const fileName = fileData.name;
-            
-            const metadata = {
-                name: fileName,
-                parents: currentFolderId === 'root' ? [] : [currentFolderId]
-            };
-            
-            const formData = new FormData();
-            formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            formData.append('file', fileBlob, fileName);
-            
-            let response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${accessToken}` },
-                body: formData
-            });
-            
-            if (response.status === 401) {
-                const newToken = await refreshAccessToken();
-                if (newToken) {
-                    accessToken = newToken;
-                    response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${accessToken}` },
-                        body: formData
-                    });
-                }
-            }
-            
-            const result = await response.json();
-            if (result.id) {
+            const uploadSuccess = await uploadFile(new File([fileBlob], fileName), currentFolderId);
+            if (uploadSuccess) {
                 successCount++;
             } else {
                 failCount++;
@@ -828,23 +1561,7 @@ async function extractAllFilesFromZip() {
 // ========== ФУНКЦИИ АУДИО/ВИДЕО ПЛЕЕРА ==========
 async function openMediaPlayer(itemId, itemName) {
     try {
-        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}?alt=media`, {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}?alt=media`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-            } else {
-                throw new Error('Token expired');
-            }
-        }
-        
-        const blob = await response.blob();
+        const blob = await downloadFileAsBlob(itemId);
         const url = URL.createObjectURL(blob);
         const isVideo = isVideoFile(itemName);
         
@@ -945,7 +1662,6 @@ function renderMediaPlayer(url, itemName, isVideo) {
             progressBar.value = percent;
             currentTimeSpan.textContent = formatTime(mediaElement.currentTime);
             durationTimeSpan.textContent = formatTime(mediaElement.duration);
-            
             localStorage.setItem(`nimbus_position_${currentMediaList[currentMediaIndex]?.id}`, mediaElement.currentTime);
         }
     };
@@ -999,22 +1715,8 @@ function renderMediaPlayer(url, itemName, isVideo) {
             titleDiv.innerHTML = `${escapeHtml(newItem.name)} (${currentMediaIndex + 1} / ${currentMediaList.length})`;
         }
         
-        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${newItem.id}?alt=media`, {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch(`https://www.googleapis.com/drive/v3/files/${newItem.id}?alt=media`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-            }
-        }
-        
-        const blob = await response.blob();
-        const newUrl = URL.createObjectURL(blob);
+        const newBlob = await downloadFileAsBlob(newItem.id);
+        const newUrl = URL.createObjectURL(newBlob);
         const oldUrl = mediaElement.src;
         mediaElement.src = newUrl;
         URL.revokeObjectURL(oldUrl);
@@ -1093,7 +1795,832 @@ function renderMediaPlayer(url, itemName, isVideo) {
     });
 }
 
-// ========== ОСНОВНАЯ ФУНКЦИЯ ОТРИСОВКИ ==========
+// ========== ФУНКЦИИ ДЛЯ АРХИВИРОВАНИЯ ==========
+
+async function addFolderToZipWithCancel(zip, folderId, folderName, signal, onProgress, totalSize, processedSize) {
+    if (signal && signal.aborted) throw new Error('Cancelled');
+    
+    const folderZip = zip.folder(folderName);
+    const items = await getItems(folderId);
+    
+    for (const item of items) {
+        if (signal && signal.aborted) throw new Error('Cancelled');
+        
+        if (item.mimeType === 'application/vnd.google-apps.folder') {
+            await addFolderToZipWithCancel(folderZip, item.id, item.name, signal, onProgress, totalSize, processedSize);
+        } else {
+            const fileBlob = await downloadFileAsBlobWithCancel(item.id, signal);
+            folderZip.file(item.name, fileBlob);
+            processedSize.current += parseInt(item.size) || 0;
+            if (onProgress && totalSize && totalSize > 0) {
+                const percent = Math.min(100, Math.round((processedSize.current / totalSize) * 100));
+                onProgress(percent);
+            }
+        }
+    }
+}
+
+async function archiveAndDownloadWithProgress(items) {
+    const abortController = new AbortController();
+    globalProgress = {
+        type: 'archive',
+        percent: 0,
+        cancelController: abortController
+    };
+    renderItemsList(allItems);
+    
+    try {
+        const zip = new JSZip();
+        let totalSize = 0;
+        
+        for (const item of items) {
+            if (abortController.signal.aborted) throw new Error('Cancelled');
+            if (item.mimeType === 'application/vnd.google-apps.folder') {
+                totalSize += await getFolderSize(item.id);
+            } else {
+                totalSize += parseInt(item.size) || 0;
+            }
+        }
+        
+        let processedSize = { current: 0 };
+        
+        const updateProgress = (percent) => {
+            if (globalProgress) {
+                globalProgress.percent = percent;
+                renderItemsList(allItems);
+            }
+        };
+        
+        for (const item of items) {
+            if (abortController.signal.aborted) throw new Error('Cancelled');
+            
+            if (item.mimeType === 'application/vnd.google-apps.folder') {
+                await addFolderToZipWithCancel(zip, item.id, item.name, abortController.signal, updateProgress, totalSize, processedSize);
+            } else {
+                const fileBlob = await downloadFileAsBlobWithCancel(item.id, abortController.signal);
+                zip.file(item.name, fileBlob);
+                processedSize.current += parseInt(item.size) || 0;
+                if (totalSize > 0) {
+                    const percent = Math.min(100, Math.round((processedSize.current / totalSize) * 100));
+                    updateProgress(percent);
+                }
+            }
+        }
+        
+        const content = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(content);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `archive_${Date.now()}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        globalProgress = null;
+        renderItemsList(allItems);
+        alert(`Архив создан и скачан! Содержит ${items.length} элементов.`);
+    } catch (err) {
+        if (err.message === 'Cancelled') {
+            globalProgress = null;
+            renderItemsList(allItems);
+            alert(`Архивация отменена`);
+        } else {
+            alert('Ошибка создания архива: ' + err.message);
+            globalProgress = null;
+            renderItemsList(allItems);
+        }
+    }
+}
+
+async function archiveAndSaveWithProgress(items) {
+    const abortController = new AbortController();
+    globalProgress = {
+        type: 'archive',
+        percent: 0,
+        cancelController: abortController
+    };
+    renderItemsList(allItems);
+    
+    try {
+        const zip = new JSZip();
+        let totalSize = 0;
+        
+        for (const item of items) {
+            if (abortController.signal.aborted) throw new Error('Cancelled');
+            if (item.mimeType === 'application/vnd.google-apps.folder') {
+                totalSize += await getFolderSize(item.id);
+            } else {
+                totalSize += parseInt(item.size) || 0;
+            }
+        }
+        
+        let processedSize = { current: 0 };
+        
+        const updateProgress = (percent) => {
+            if (globalProgress) {
+                globalProgress.percent = percent;
+                renderItemsList(allItems);
+            }
+        };
+        
+        for (const item of items) {
+            if (abortController.signal.aborted) throw new Error('Cancelled');
+            
+            if (item.mimeType === 'application/vnd.google-apps.folder') {
+                await addFolderToZipWithCancel(zip, item.id, item.name, abortController.signal, updateProgress, totalSize, processedSize);
+            } else {
+                const fileBlob = await downloadFileAsBlobWithCancel(item.id, abortController.signal);
+                zip.file(item.name, fileBlob);
+                processedSize.current += parseInt(item.size) || 0;
+                if (totalSize > 0) {
+                    const percent = Math.min(100, Math.round((processedSize.current / totalSize) * 100));
+                    updateProgress(percent);
+                }
+            }
+        }
+        
+        const content = await zip.generateAsync({ type: 'blob' });
+        const archiveName = `archive_${Date.now()}.zip`;
+        const archiveSize = content.size;
+        
+        const currentUsed = usedBytes;
+        const newTotal = currentUsed + archiveSize;
+        const limitBytes = limitGB * 1024 * 1024 * 1024;
+        
+        if (newTotal > limitBytes) {
+            const needGB = (newTotal - limitBytes) / (1024 * 1024 * 1024);
+            const userChoice = confirm(
+                `Недостаточно места в хранилище!\n\n` +
+                `Текущее использование: ${formatFileSize(currentUsed)}\n` +
+                `Лимит: ${limitGB} ГБ\n` +
+                `Необходимо дополнительно: ~${needGB.toFixed(2)} ГБ\n\n` +
+                `Хотите перейти в меню агрегатора для увеличения хранилища?`
+            );
+            if (userChoice) {
+                window.open('https://one.google.com/storage', '_blank');
+            }
+            globalProgress = null;
+            renderItemsList(allItems);
+            return;
+        }
+        
+        const metadata = {
+            name: archiveName,
+            mimeType: 'application/zip',
+            parents: currentFolderId === 'root' ? [] : [currentFolderId]
+        };
+        
+        const formData = new FormData();
+        formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        formData.append('file', content, archiveName);
+        
+        let response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${accessToken}` },
+            body: formData,
+            signal: abortController.signal
+        });
+        
+        if (response.status === 401) {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                accessToken = newToken;
+                response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                    body: formData,
+                    signal: abortController.signal
+                });
+            } else {
+                throw new Error('Token expired');
+            }
+        }
+        
+        const result = await response.json();
+        if (result.id) {
+            alert(`Архив "${archiveName}" сохранён в хранилище! Содержит ${items.length} элементов.`);
+            globalProgress = null;
+            await loadItems();
+        } else {
+            alert('Ошибка сохранения архива');
+            globalProgress = null;
+            renderItemsList(allItems);
+        }
+    } catch (err) {
+        if (err.message === 'Cancelled') {
+            globalProgress = null;
+            renderItemsList(allItems);
+            alert(`Архивация отменена`);
+        } else {
+            alert('Ошибка: ' + err.message);
+            globalProgress = null;
+            renderItemsList(allItems);
+        }
+    }
+}
+
+async function archiveAndShareWithProgress(items, targetToken, targetName, targetFolderId, targetService) {
+    const abortController = new AbortController();
+    globalProgress = {
+        type: 'move',
+        percent: 0,
+        cancelController: abortController
+    };
+    renderItemsList(allItems);
+    
+    try {
+        const zip = new JSZip();
+        let totalSize = 0;
+        
+        for (const item of items) {
+            if (abortController.signal.aborted) throw new Error('Cancelled');
+            if (item.mimeType === 'application/vnd.google-apps.folder') {
+                totalSize += await getFolderSize(item.id);
+            } else {
+                totalSize += parseInt(item.size) || 0;
+            }
+        }
+        
+        let processedSize = { current: 0 };
+        
+        const updateProgress = (percent) => {
+            if (globalProgress) {
+                globalProgress.percent = percent;
+                renderItemsList(allItems);
+            }
+        };
+        
+        for (const item of items) {
+            if (abortController.signal.aborted) throw new Error('Cancelled');
+            
+            if (item.mimeType === 'application/vnd.google-apps.folder') {
+                await addFolderToZipWithCancel(zip, item.id, item.name, abortController.signal, updateProgress, totalSize, processedSize);
+            } else {
+                const fileBlob = await downloadFileAsBlobWithCancel(item.id, abortController.signal);
+                zip.file(item.name, fileBlob);
+                processedSize.current += parseInt(item.size) || 0;
+                if (totalSize > 0) {
+                    const percent = Math.min(100, Math.round((processedSize.current / totalSize) * 100));
+                    updateProgress(percent);
+                }
+            }
+        }
+        
+        const content = await zip.generateAsync({ type: 'blob' });
+        const archiveName = `archive_${Date.now()}.zip`;
+        
+        let uploadSuccess = false;
+        let currentToken = targetToken;
+        
+        if (targetService === 'google') {
+            const metadata = {
+                name: archiveName,
+                mimeType: 'application/zip',
+                parents: targetFolderId === 'root' ? [] : [targetFolderId]
+            };
+            
+            const formData = new FormData();
+            formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            formData.append('file', content, archiveName);
+            
+            let response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${currentToken}` },
+                body: formData,
+                signal: abortController.signal
+            });
+            
+            if (response.status === 401) {
+                console.log('Google token expired, refreshing...');
+                const newToken = await refreshTargetToken('google', currentToken);
+                if (newToken) {
+                    currentToken = newToken;
+                    response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${currentToken}` },
+                        body: formData,
+                        signal: abortController.signal
+                    });
+                } else {
+                    throw new Error('Token expired');
+                }
+            }
+            
+            const result = await response.json();
+            uploadSuccess = !!result.id;
+            
+        } else if (targetService === 'yandex') {
+            let targetPath = targetFolderId === '/' ? `/${archiveName}` : `${targetFolderId}/${archiveName}`;
+            
+            let uploadUrlResponse = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/upload?path=${encodeURIComponent(targetPath)}&overwrite=true`, {
+                method: 'GET',
+                headers: { 'Authorization': `OAuth ${currentToken}` }
+            });
+            
+            if (uploadUrlResponse.status === 401) {
+                console.log('Yandex token expired, refreshing...');
+                const newToken = await refreshTargetToken('yandex', currentToken);
+                if (newToken) {
+                    currentToken = newToken;
+                    uploadUrlResponse = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/upload?path=${encodeURIComponent(targetPath)}&overwrite=true`, {
+                        method: 'GET',
+                        headers: { 'Authorization': `OAuth ${currentToken}` }
+                    });
+                } else {
+                    throw new Error('Token expired');
+                }
+            }
+            
+            const uploadData = await uploadUrlResponse.json();
+            const uploadUrl = uploadData.href;
+            
+            let uploadResponse = await fetch(uploadUrl, {
+                method: 'PUT',
+                body: content,
+                signal: abortController.signal
+            });
+            
+            uploadSuccess = uploadResponse.ok;
+        }
+        
+        if (uploadSuccess) {
+            globalProgress = null;
+            renderItemsList(allItems);
+            alert(`Архив "${archiveName}" перемещён в облако "${targetName}"! Содержит ${items.length} элементов.`);
+            await loadItems();
+        } else {
+            throw new Error('Upload failed');
+        }
+    } catch (err) {
+        if (err.message === 'Cancelled') {
+            globalProgress = null;
+            renderItemsList(allItems);
+            alert(`Перемещение архива отменено`);
+        } else {
+            console.error('Archive share error:', err);
+            alert('Ошибка перемещения архива: ' + err.message);
+            globalProgress = null;
+            renderItemsList(allItems);
+        }
+    }
+}
+
+async function showArchiveMenuForItems(items) {
+    const modal = document.createElement('div');
+    modal.className = 'share-modal';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="share-modal-content" style="width: 350px;">
+            <h3>Архивировать (${items.length} элементов)</h3>
+            <div class="share-cloud-list" style="margin-bottom: 10px;">
+                <div class="share-cloud-item" data-action="download">
+                    <div class="share-cloud-icon" style="font-size: 32px;">📥</div>
+                    <div class="share-cloud-info">
+                        <div class="share-cloud-name">Архивировать и скачать</div>
+                        <div class="share-cloud-email">Создать архив и скачать на устройство</div>
+                    </div>
+                </div>
+                <div class="share-cloud-item" data-action="save">
+                    <div class="share-cloud-icon" style="font-size: 32px;">💾</div>
+                    <div class="share-cloud-info">
+                        <div class="share-cloud-name">Архивировать и сохранить</div>
+                        <div class="share-cloud-email">Создать архив и сохранить в хранилище</div>
+                    </div>
+                </div>
+                <div class="share-cloud-item" data-action="share">
+                    <div class="share-cloud-icon" style="font-size: 32px;">☁️</div>
+                    <div class="share-cloud-info">
+                        <div class="share-cloud-name">Архивировать и переместить</div>
+                        <div class="share-cloud-email">Создать архив и переместить в другое облако</div>
+                    </div>
+                </div>
+            </div>
+            <button class="share-cancel-btn" id="archiveMenuCancelBtn">Отмена</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    const handleCancel = () => modal.remove();
+    modal.querySelector('#archiveMenuCancelBtn').onclick = handleCancel;
+    
+    modal.querySelectorAll('.share-cloud-item').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const action = btn.dataset.action;
+            modal.remove();
+            
+            if (action === 'download') {
+                await archiveAndDownloadWithProgress(items);
+            } else if (action === 'save') {
+                await archiveAndSaveWithProgress(items);
+            } else if (action === 'share') {
+                const allAccounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+                const otherAccounts = allAccounts.filter(acc => acc.email !== email);
+                
+                if (otherAccounts.length === 0) {
+                    alert('Нет других подключенных облаков. Сначала подключите хотя бы одно другое облако.');
+                    return;
+                }
+                
+                const cloudModal = document.createElement('div');
+                cloudModal.className = 'share-modal';
+                cloudModal.style.display = 'flex';
+                cloudModal.innerHTML = `
+                    <div class="share-modal-content" style="width: 400px;">
+                        <h3>Выберите облако для перемещения архива</h3>
+                        <div class="share-cloud-list" id="archiveShareCloudsList"></div>
+                        <button class="share-cancel-btn" id="archiveShareCancelBtn">Отмена</button>
+                    </div>
+                `;
+                document.body.appendChild(cloudModal);
+                
+                const container = cloudModal.querySelector('#archiveShareCloudsList');
+                let selectedTarget = null;
+                
+                otherAccounts.forEach(acc => {
+                    const item = document.createElement('div');
+                    item.className = 'share-cloud-item';
+                    item.innerHTML = `
+                        <img src="assets/cloud-icon-${acc.service}.png" class="share-cloud-icon" alt="${acc.service}">
+                        <div class="share-cloud-info">
+                            <div class="share-cloud-name">${escapeHtml(acc.name)}</div>
+                            <div class="share-cloud-email">${escapeHtml(acc.email)}</div>
+                        </div>
+                    `;
+                    item.addEventListener('click', async () => {
+                        selectedTarget = acc;
+                        cloudModal.remove();
+                        
+                        const folders = await loadFoldersForTargetUniversal(acc.accessToken, acc.service);
+                        
+                        const folderModal = document.createElement('div');
+                        folderModal.className = 'folder-select-modal';
+                        folderModal.style.display = 'flex';
+                        folderModal.innerHTML = `
+                            <div class="folder-select-content">
+                                <div class="folder-select-header">
+                                    <h3>Выберите папку для перемещения архива</h3>
+                                    <button class="folder-select-close" id="folderSelectCloseBtn">×</button>
+                                </div>
+                                <div class="folder-select-body" id="folderSelectBody">
+                                    <div class="loading">Загрузка папок...</div>
+                                </div>
+                                <div class="folder-select-footer">
+                                    <button class="folder-select-btn cancel" id="folderSelectCancelBtn">Отмена</button>
+                                    <button class="folder-select-btn create" id="folderSelectCreateBtn">➕ Создать папку</button>
+                                    <button class="folder-select-btn" id="folderSelectConfirmBtn">Переместить сюда</button>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(folderModal);
+                        
+                        let selectedFolderId = acc.service === 'yandex' ? '/' : 'root';
+                        
+                        const renderFolderSelect = (foldersList) => {
+                            const body = folderModal.querySelector('#folderSelectBody');
+                            
+                            let html = '<div class="new-folder-input">';
+                            html += '<input type="text" id="newFolderNameInput" placeholder="Название новой папки">';
+                            html += '<button id="createNewFolderBtn">Создать</button>';
+                            html += '</div>';
+                            
+                            if (!foldersList || foldersList.length === 0) {
+                                html += '<div class="loading">Папки не найдены</div>';
+                            } else {
+                                foldersList.forEach(folder => {
+                                    const folderValue = folder.path || folder.id;
+                                    html += `
+                                        <div class="folder-item" data-id="${folderValue}" data-path="${folderValue}">
+                                            <div class="folder-icon">📁</div>
+                                            <div class="folder-name">${escapeHtml(folder.name)}</div>
+                                        </div>
+                                    `;
+                                });
+                            }
+                            
+                            if (acc.service === 'yandex') {
+                                html += `
+                                    <div class="folder-item" data-id="/" data-path="/">
+                                        <div class="folder-icon">📁</div>
+                                        <div class="folder-name">Корень</div>
+                                    </div>
+                                `;
+                            } else {
+                                html += `
+                                    <div class="folder-item" data-id="root" data-path="root">
+                                        <div class="folder-icon">📁</div>
+                                        <div class="folder-name">Корень (Root)</div>
+                                    </div>
+                                `;
+                            }
+                            
+                            body.innerHTML = html;
+                            
+                            body.querySelectorAll('.folder-item').forEach(folderItem => {
+                                folderItem.addEventListener('click', () => {
+                                    body.querySelectorAll('.folder-item').forEach(i => i.style.background = '');
+                                    folderItem.style.background = '#e8eaf6';
+                                    selectedFolderId = folderItem.dataset.path || folderItem.dataset.id;
+                                });
+                            });
+                            
+                            const createNewBtn = body.querySelector('#createNewFolderBtn');
+                            if (createNewBtn) {
+                                createNewBtn.onclick = async () => {
+                                    const newFolderName = body.querySelector('#newFolderNameInput').value.trim();
+                                    if (!newFolderName) {
+                                        alert('Введите название папки');
+                                        return;
+                                    }
+                                    try {
+                                        const newFolderId = await createFolderInTargetUniversal(selectedTarget.accessToken, newFolderName, selectedFolderId, selectedTarget.service);
+                                        alert(`Папка "${newFolderName}" создана!`);
+                                        const updatedFolders = await loadFoldersForTargetUniversal(selectedTarget.accessToken, selectedTarget.service);
+                                        renderFolderSelect(updatedFolders);
+                                        setTimeout(() => {
+                                            const newFolderItem = body.querySelector(`.folder-item[data-id="${newFolderId}"]`);
+                                            if (newFolderItem) {
+                                                body.querySelectorAll('.folder-item').forEach(i => i.style.background = '');
+                                                newFolderItem.style.background = '#e8eaf6';
+                                                selectedFolderId = newFolderId;
+                                            }
+                                        }, 100);
+                                    } catch (err) {
+                                        alert('Ошибка создания папки: ' + err.message);
+                                    }
+                                };
+                            }
+                        };
+                        
+                        const foldersList = await loadFoldersForTargetUniversal(acc.accessToken, acc.service);
+                        renderFolderSelect(foldersList);
+                        
+                        folderModal.querySelector('#folderSelectCloseBtn').onclick = () => folderModal.remove();
+                        folderModal.querySelector('#folderSelectCancelBtn').onclick = () => folderModal.remove();
+                        folderModal.querySelector('#folderSelectConfirmBtn').onclick = async () => {
+                            folderModal.remove();
+                            await archiveAndShareWithProgress(items, selectedTarget.accessToken, selectedTarget.name, selectedFolderId, selectedTarget.service);
+                        };
+                    });
+                    container.appendChild(item);
+                });
+                
+                cloudModal.querySelector('#archiveShareCancelBtn').onclick = () => cloudModal.remove();
+            }
+        });
+    });
+}
+
+// ========== ФУНКЦИИ ДЛЯ ОБНОВЛЕНИЯ СТАТИСТИКИ И ТОКЕНА ==========
+
+async function updateStats() {
+    if (isTrashMode) return;
+    try {
+        let response = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota', {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        
+        if (response.status === 401) {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                accessToken = newToken;
+                response = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota', {
+                    headers: { Authorization: `Bearer ${accessToken}` }
+                });
+            } else {
+                throw new Error('Token expired');
+            }
+        }
+        
+        const data = await response.json();
+        usedBytes = parseInt(data.storageQuota.usage) || 0;
+        const usedGB = usedBytes / (1024 * 1024 * 1024);
+        const percent = (usedGB / limitGB) * 100;
+        const percentFormatted = percent.toFixed(1);
+        
+        document.getElementById('usedValue').innerHTML = `${usedGB.toFixed(2)} ГБ`;
+        const percentElem = document.getElementById('percentValue');
+        percentElem.innerHTML = `${percentFormatted}%`;
+        const bgColor = getColorForPercent(Math.min(100, percent));
+        percentElem.style.backgroundColor = bgColor;
+        percentElem.style.color = percent > 50 ? 'white' : '#1a237e';
+        
+        return { usedBytes, usedGB, percent };
+    } catch (err) {
+        console.error(err);
+        document.getElementById('usedValue').innerHTML = '— ГБ';
+        document.getElementById('percentValue').innerHTML = '—%';
+        return null;
+    }
+}
+
+async function saveLimit(newLimit) {
+    if (newLimit < 1) newLimit = 1;
+    limitGB = newLimit;
+    document.getElementById('limitInput').value = limitGB;
+    localStorage.setItem(`limit_${email}`, limitGB);
+    await updateStats();
+    alert(`Лимит установлен: ${limitGB} ГБ`);
+}
+
+async function refreshAccessToken() {
+    try {
+        const accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+        const account = accounts.find(acc => acc.email === email);
+        if (!account || !account.refreshToken) return null;
+        
+        const response = await fetch(PROXY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: account.refreshToken, grant_type: 'refresh_token', service: 'google' })
+        });
+        const data = await response.json();
+        if (data.access_token) {
+            account.accessToken = data.access_token;
+            localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+            return data.access_token;
+        }
+        return null;
+    } catch (err) {
+        console.error('Refresh error:', err);
+        return null;
+    }
+}
+
+// ========== ФУНКЦИИ ДЛЯ ПЕРЕМЕЩЕНИЯ МЕЖДУ ОБЛАКАМИ (ДЛЯ storage-share.js) ==========
+
+async function refreshTargetToken(service, oldToken) {
+    try {
+        const accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+        const account = accounts.find(acc => acc.accessToken === oldToken && acc.service === service);
+        if (!account || !account.refreshToken) return null;
+        
+        const response = await fetch(PROXY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                refresh_token: account.refreshToken, 
+                grant_type: 'refresh_token',
+                service: service
+            })
+        });
+        const data = await response.json();
+        if (data.access_token) {
+            account.accessToken = data.access_token;
+            localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+            return data.access_token;
+        }
+        return null;
+    } catch (err) {
+        console.error('Refresh target token error:', err);
+        return null;
+    }
+}
+
+async function loadFoldersForTarget(targetToken, targetService) {
+    if (targetService === 'google') {
+        try {
+            const response = await fetch('https://www.googleapis.com/drive/v3/files?fields=files(id,name,mimeType)&q=mimeType=\'application/vnd.google-apps.folder\' and trashed=false', {
+                headers: { 'Authorization': `Bearer ${targetToken}` }
+            });
+            const data = await response.json();
+            return data.files || [];
+        } catch (err) {
+            console.error('Load Google folders error:', err);
+            return [];
+        }
+    } else if (targetService === 'yandex') {
+        try {
+            let all = [];
+            let limit = 100;
+            let offset = 0;
+            const YANDEX_API_URL = 'https://cloud-api.yandex.net/v1/disk';
+            
+            while (true) {
+                let url = `${YANDEX_API_URL}/resources?path=${encodeURIComponent('/')}&limit=${limit}&offset=${offset}&fields=_embedded.items.name,_embedded.items.path,_embedded.items.type,_embedded.items.resource_id`;
+                
+                let response = await fetch(url, {
+                    headers: { 'Authorization': `OAuth ${targetToken}` }
+                });
+                
+                if (response.status === 401) {
+                    const newToken = await refreshTargetToken('yandex', targetToken);
+                    if (newToken) {
+                        targetToken = newToken;
+                        response = await fetch(url, {
+                            headers: { 'Authorization': `OAuth ${targetToken}` }
+                        });
+                    }
+                }
+                
+                if (!response.ok) break;
+                
+                const data = await response.json();
+                if (data._embedded && data._embedded.items) {
+                    for (const item of data._embedded.items) {
+                        if (item.type === 'dir') {
+                            all.push({
+                                id: item.resource_id,
+                                name: item.name,
+                                path: item.path
+                            });
+                        }
+                    }
+                }
+                
+                if (data._embedded && data._embedded.items && data._embedded.items.length === limit) {
+                    offset += limit;
+                } else {
+                    break;
+                }
+            }
+            return all;
+        } catch (err) {
+            console.error('Load Yandex folders error:', err);
+            return [];
+        }
+    }
+    return [];
+}
+
+async function createFolderInTarget(targetToken, folderName, parentId, targetService) {
+    if (targetService === 'google') {
+        try {
+            const metadata = {
+                name: folderName,
+                mimeType: 'application/vnd.google-apps.folder',
+                parents: parentId === 'root' ? [] : [parentId]
+            };
+            const response = await fetch('https://www.googleapis.com/drive/v3/files', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${targetToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(metadata)
+            });
+            const data = await response.json();
+            return data.id;
+        } catch (err) {
+            console.error('Create folder in Google error:', err);
+            throw err;
+        }
+    } else if (targetService === 'yandex') {
+        try {
+            const parentPath = (parentId === '/' || parentId === 'root') ? '/' : parentId;
+            const newPath = parentPath === '/' ? `/${folderName}` : `${parentPath}/${folderName}`;
+            
+            let response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(newPath)}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `OAuth ${targetToken}` }
+            });
+            
+            if (response.status === 401) {
+                const newToken = await refreshTargetToken('yandex', targetToken);
+                if (newToken) {
+                    targetToken = newToken;
+                    response = await fetch(`https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(newPath)}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `OAuth ${targetToken}` }
+                    });
+                }
+            }
+            
+            const data = await response.json();
+            return data.resource_id || data.id;
+        } catch (err) {
+            console.error('Create folder in Yandex error:', err);
+            throw err;
+        }
+    }
+    throw new Error('Unknown service');
+}
+
+// ========== ФУНКЦИИ ОТРИСОВКИ (UI) ==========
+
+function getItemIcon(item) {
+    if (item.mimeType === 'application/vnd.google-apps.folder') return '📁';
+    const ext = item.name.split('.').pop().toLowerCase();
+    if (item.mimeType.includes('image') || ['jpg','jpeg','png','gif','webp','bmp'].includes(ext)) return '🖼️';
+    if (item.mimeType.includes('pdf') || ext === 'pdf') return '📑';
+    if (item.mimeType.includes('zip') || ['zip','rar','7z','tar','gz'].includes(ext)) return '📦';
+    if (item.mimeType.includes('document') || ['doc','docx','txt','rtf','odt'].includes(ext)) return '📝';
+    if (item.mimeType.includes('spreadsheet') || ['xls','xlsx','csv','ods'].includes(ext)) return '📊';
+    if (item.mimeType.includes('presentation') || ['ppt','pptx','odp'].includes(ext)) return '📽️';
+    if (item.mimeType.includes('video') || ['mp4','avi','mkv','mov','wmv','flv','webm'].includes(ext)) return '🎬';
+    if (item.mimeType.includes('audio') || ['mp3','wav','flac','aac','ogg','m4a'].includes(ext)) return '🎵';
+    return '📄';
+}
+
+function getItemDisplaySize(item) {
+    if (item.mimeType === 'application/vnd.google-apps.folder') {
+        const cachedSize = window.folderSizes?.[item.id];
+        if (cachedSize) return formatFileSize(cachedSize);
+        return '—';
+    }
+    return formatFileSize(item.size);
+}
+
 function renderItemsList(items) {
     const container = document.getElementById('filesContainer');
     if (!items || items.length === 0) {
@@ -1326,1674 +2853,8 @@ function attachItemEvents() {
     });
 }
 
-// ========== ФУНКЦИИ КОРЗИНЫ ==========
-async function moveToTrash(itemId) {
-    try {
-        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}`, {
-            method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ trashed: true })
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ trashed: true })
-                });
-            } else {
-                throw new Error('Token expired');
-            }
-        }
-        
-        return response.ok;
-    } catch (err) {
-        console.error('Move to trash error:', err);
-        throw err;
-    }
-}
-
-async function moveMultipleToTrash(items) {
-    let successCount = 0;
-    let failCount = 0;
-    
-    for (const item of items) {
-        try {
-            await moveToTrash(item.id);
-            successCount++;
-        } catch (err) {
-            console.error(`Error moving ${item.name} to trash:`, err);
-            failCount++;
-        }
-    }
-    
-    if (failCount === 0) {
-        alert(`Удалено в корзину: ${successCount} элементов`);
-    } else {
-        alert(`Удалено: ${successCount}, Ошибок: ${failCount}`);
-    }
-    
-    selectedFiles.clear();
-    updateHeaderButtonsState();
-    await loadItems();
-}
-
-async function getTrashFiles() {
-    let all = [];
-    let pageToken = '';
-    try {
-        while (true) {
-            let url = `https://www.googleapis.com/drive/v3/files?fields=files(id,name,size,mimeType,createdTime,modifiedTime,parents)&pageSize=1000&q=trashed=true`;
-            if (pageToken) url += `&pageToken=${pageToken}`;
-            let response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-            
-            if (response.status === 401) {
-                const newToken = await refreshAccessToken();
-                if (newToken) {
-                    accessToken = newToken;
-                    response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-                } else {
-                    throw new Error('Token expired');
-                }
-            }
-            
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            if (data.files && data.files.length > 0) {
-                all = all.concat(data.files);
-            }
-            if (data.nextPageToken) pageToken = data.nextPageToken;
-            else break;
-        }
-    } catch (err) {
-        console.error('API Error:', err);
-        throw err;
-    }
-    return all;
-}
-
-async function restoreFile(fileId) {
-    try {
-        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
-            method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ trashed: false })
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ trashed: false })
-                });
-            } else {
-                throw new Error('Token expired');
-            }
-        }
-        
-        return response.ok;
-    } catch (err) {
-        console.error('Restore error:', err);
-        throw err;
-    }
-}
-
-async function restoreMultipleFiles(files) {
-    let successCount = 0;
-    let failCount = 0;
-    
-    for (const file of files) {
-        try {
-            const success = await restoreFile(file.id);
-            if (success) {
-                successCount++;
-            } else {
-                failCount++;
-            }
-        } catch (err) {
-            console.error(`Error restoring ${file.name}:`, err);
-            failCount++;
-        }
-    }
-    
-    if (failCount === 0) {
-        alert(`Восстановлено: ${successCount} элементов`);
-    } else {
-        alert(`Восстановлено: ${successCount}, Ошибок: ${failCount}`);
-    }
-    
-    selectedFiles.clear();
-    updateHeaderButtonsState();
-    await showTrashMode();
-}
-
-async function permanentDeleteFile(fileId) {
-    try {
-        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-            } else {
-                throw new Error('Token expired');
-            }
-        }
-        
-        return response.ok;
-    } catch (err) {
-        console.error('Permanent delete error:', err);
-        throw err;
-    }
-}
-
-async function permanentDeleteMultipleFiles(files) {
-    let successCount = 0;
-    let failCount = 0;
-    
-    for (const file of files) {
-        try {
-            const success = await permanentDeleteFile(file.id);
-            if (success) {
-                successCount++;
-            } else {
-                failCount++;
-            }
-        } catch (err) {
-            console.error(`Error deleting ${file.name}:`, err);
-            failCount++;
-        }
-    }
-    
-    if (failCount === 0) {
-        alert(`Удалено навсегда: ${successCount} элементов`);
-    } else {
-        alert(`Удалено: ${successCount}, Ошибок: ${failCount}`);
-    }
-    
-    selectedFiles.clear();
-    updateHeaderButtonsState();
-    await showTrashMode();
-}
-
-async function showTrashMode() {
-    isTrashMode = true;
-    folderPath = [{ id: 'trash', name: 'Корзина' }];
-    updateBreadcrumb();
-    updateBreadcrumbNavigation();
-    
-    const container = document.getElementById('filesContainer');
-    container.innerHTML = '<div class="loading">Загрузка корзины...</div>';
-    
-    try {
-        trashFiles = await getTrashFiles();
-        renderTrashList();
-    } catch (err) {
-        container.innerHTML = `<div class="loading">Ошибка загрузки корзины: ${err.message}</div>`;
-    }
-}
-
-function renderTrashList() {
-    const container = document.getElementById('filesContainer');
-    if (!trashFiles || trashFiles.length === 0) {
-        container.innerHTML = '<div class="loading">Корзина пуста</div>';
-        return;
-    }
-    
-    const sorted = sortItems(trashFiles);
-    
-    if (currentView === 'list') {
-        let html = '<div class="file-list">';
-        for (const file of sorted) {
-            const isChecked = selectedFiles.has(file.id);
-            const displaySize = formatFileSize(file.size);
-            const formattedDate = formatDate(file.modifiedTime || file.createdTime);
-            const fileExt = getFileExtension(file.name);
-            const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
-            
-            html += `
-                <div class="file-list-item" data-id="${file.id}">
-                    <div class="file-check">
-                        <input type="checkbox" class="file-checkbox" data-id="${file.id}" ${isChecked ? 'checked' : ''}>
-                    </div>
-                    <div class="file-icon">${getItemIcon(file)}</div>
-                    <div class="file-info">
-                        <div class="file-name-row">
-                            <span class="file-name">${escapeHtml(file.name)}</span>
-                            ${!isFolder ? `<span class="file-type-label"> (${getFileTypeLabel(fileExt)})</span>` : ''}
-                            <span class="file-size">${displaySize}</span>
-                            <span class="file-date">${formattedDate}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        html += '</div>';
-        container.innerHTML = html;
-    } else {
-        let html = '<div class="file-grid">';
-        for (const file of sorted) {
-            const isChecked = selectedFiles.has(file.id);
-            const displaySize = formatFileSize(file.size);
-            const formattedDate = formatDate(file.modifiedTime || file.createdTime);
-            const fileExt = getFileExtension(file.name);
-            const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
-            
-            html += `
-                <div class="file-grid-item" data-id="${file.id}">
-                    <div class="file-check">
-                        <input type="checkbox" class="file-checkbox" data-id="${file.id}" ${isChecked ? 'checked' : ''}>
-                    </div>
-                    <div class="file-icon">${getItemIcon(file)}</div>
-                    <div class="file-name">${escapeHtml(file.name)}</div>
-                    ${!isFolder ? `<div class="file-type-label"> (${getFileTypeLabel(fileExt)})</div>` : ''}
-                    <div class="file-size">${displaySize}</div>
-                    <div class="file-date">${formattedDate}</div>
-                </div>
-            `;
-        }
-        html += '</div>';
-        container.innerHTML = html;
-    }
-    
-    attachTrashEvents();
-}
-
-function attachTrashEvents() {
-    document.querySelectorAll('.file-checkbox').forEach(cb => {
-        cb.addEventListener('change', (e) => {
-            const fileId = cb.dataset.id;
-            if (cb.checked) {
-                selectedFiles.add(fileId);
-            } else {
-                selectedFiles.delete(fileId);
-            }
-            updateHeaderButtonsState();
-        });
-    });
-}
-
-async function exitTrashMode() {
-    isTrashMode = false;
-    selectedFiles.clear();
-    folderPath = [{ id: 'root', name: 'Корень' }];
-    currentFolderId = 'root';
-    updateBreadcrumb();
-    updateBreadcrumbNavigation();
-    await loadItems();
-}
-
-async function refreshAccessToken() {
-    try {
-        const accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
-        const account = accounts.find(acc => acc.email === email);
-        if (!account || !account.refreshToken) return null;
-        
-        const response = await fetch(PROXY_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh_token: account.refreshToken, grant_type: 'refresh_token' })
-        });
-        const data = await response.json();
-        if (data.access_token) {
-            account.accessToken = data.access_token;
-            localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
-            return data.access_token;
-        }
-        return null;
-    } catch (err) {
-        console.error('Refresh error:', err);
-        return null;
-    }
-}
-
-async function updateStats() {
-    if (isTrashMode) return;
-    try {
-        let response = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota', {
-            headers: { Authorization: `Bearer ${accessToken}` }
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota', {
-                    headers: { Authorization: `Bearer ${accessToken}` }
-                });
-            } else {
-                throw new Error('Token expired');
-            }
-        }
-        
-        const data = await response.json();
-        usedBytes = parseInt(data.storageQuota.usage) || 0;
-        const usedGB = usedBytes / (1024 * 1024 * 1024);
-        const percent = (usedGB / limitGB) * 100;
-        const percentFormatted = percent.toFixed(1);
-        
-        document.getElementById('usedValue').innerHTML = `${usedGB.toFixed(2)} ГБ`;
-        const percentElem = document.getElementById('percentValue');
-        percentElem.innerHTML = `${percentFormatted}%`;
-        const bgColor = getColorForPercent(Math.min(100, percent));
-        percentElem.style.backgroundColor = bgColor;
-        percentElem.style.color = percent > 50 ? 'white' : '#1a237e';
-        
-        return { usedBytes, usedGB, percent };
-    } catch (err) {
-        console.error(err);
-        document.getElementById('usedValue').innerHTML = '— ГБ';
-        document.getElementById('percentValue').innerHTML = '—%';
-        return null;
-    }
-}
-
-async function saveLimit(newLimit) {
-    if (newLimit < 1) newLimit = 1;
-    limitGB = newLimit;
-    document.getElementById('limitInput').value = limitGB;
-    localStorage.setItem(`limit_${email}`, limitGB);
-    await updateStats();
-    alert(`Лимит установлен: ${limitGB} ГБ`);
-}
-
-// ========== ФУНКЦИЯ СОХРАНЕНИЯ (СКАЧИВАНИЯ) ФАЙЛОВ ==========
-async function downloadFile(fileId, fileName) {
-    try {
-        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-            } else {
-                throw new Error('Token expired');
-            }
-        }
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        return true;
-    } catch (err) {
-        console.error('Download error:', err);
-        throw err;
-    }
-}
-
-async function downloadMultipleFiles(files) {
-    let successCount = 0;
-    let failCount = 0;
-    
-    for (const file of files) {
-        try {
-            await downloadFile(file.id, file.name);
-            successCount++;
-        } catch (err) {
-            console.error(`Ошибка скачивания ${file.name}:`, err);
-            failCount++;
-        }
-    }
-    
-    if (failCount === 0) {
-        alert(`Скачано файлов: ${successCount}`);
-    } else {
-        alert(`Скачано: ${successCount}, Ошибок: ${failCount}`);
-    }
-}
-
-// ========== ФУНКЦИЯ ПЕРЕМЕЩЕНИЯ ВНУТРИ ХРАНИЛИЩА ==========
-async function showMoveToFolderModal() {
-    if (selectedFiles.size === 0) {
-        alert('Выберите элементы для перемещения');
-        return;
-    }
-    
-    moveInsideItems = [];
-    for (const id of selectedFiles) {
-        const item = allItems.find(i => i.id === id);
-        if (item) {
-            moveInsideItems.push(item);
-        }
-    }
-    
-    moveInsideTargetFolderId = currentFolderId;
-    
-    const folders = await getFoldersList();
-    renderMoveToFolderSelect(folders);
-    document.getElementById('moveInsideModal').style.display = 'flex';
-}
-
-async function getFoldersList() {
-    let all = [];
-    let pageToken = '';
-    try {
-        while (true) {
-            let url = `https://www.googleapis.com/drive/v3/files?fields=files(id,name,mimeType)&pageSize=1000&q=mimeType='application/vnd.google-apps.folder' and trashed=false`;
-            if (pageToken) url += `&pageToken=${pageToken}`;
-            let response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-            
-            if (response.status === 401) {
-                const newToken = await refreshAccessToken();
-                if (newToken) {
-                    accessToken = newToken;
-                    response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-                } else {
-                    throw new Error('Token expired');
-                }
-            }
-            
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            if (data.files && data.files.length > 0) {
-                all = all.concat(data.files);
-            }
-            if (data.nextPageToken) pageToken = data.nextPageToken;
-            else break;
-        }
-    } catch (err) {
-        console.error('API Error:', err);
-    }
-    return all;
-}
-
-function renderMoveToFolderSelect(folders) {
-    const body = document.getElementById('moveInsideBody');
-    
-    let html = '<div class="new-folder-input">';
-    html += '<input type="text" id="moveInsideNewFolderName" placeholder="Название новой папки">';
-    html += '<button id="moveInsideCreateFolderBtn">Создать</button>';
-    html += '</div>';
-    
-    if (!folders || folders.length === 0) {
-        html += '<div class="loading">Папки не найдены</div>';
-    } else {
-        folders.forEach(folder => {
-            html += `
-                <div class="folder-item" data-id="${folder.id}">
-                    <div class="folder-icon">📁</div>
-                    <div class="folder-name">${escapeHtml(folder.name)}</div>
-                </div>
-            `;
-        });
-    }
-    
-    html += `
-        <div class="folder-item" data-id="root">
-            <div class="folder-icon">📁</div>
-            <div class="folder-name">Корень (Root)</div>
-        </div>
-    `;
-    
-    body.innerHTML = html;
-    
-    document.querySelectorAll('#moveInsideBody .folder-item').forEach(item => {
-        item.addEventListener('click', () => {
-            document.querySelectorAll('#moveInsideBody .folder-item').forEach(i => i.style.background = '');
-            item.style.background = '#e8eaf6';
-            moveInsideTargetFolderId = item.dataset.id;
-        });
-    });
-    
-    const createBtn = document.getElementById('moveInsideCreateFolderBtn');
-    if (createBtn) {
-        createBtn.onclick = async () => {
-            const newFolderName = document.getElementById('moveInsideNewFolderName').value.trim();
-            if (!newFolderName) {
-                alert('Введите название папки');
-                return;
-            }
-            try {
-                const newFolderId = await createFolderInCurrent(newFolderName, moveInsideTargetFolderId);
-                alert(`Папка "${newFolderName}" создана!`);
-                document.getElementById('moveInsideNewFolderName').value = '';
-                const updatedFolders = await getFoldersList();
-                renderMoveToFolderSelect(updatedFolders);
-                setTimeout(() => {
-                    const newFolderItem = document.querySelector(`#moveInsideBody .folder-item[data-id="${newFolderId}"]`);
-                    if (newFolderItem) {
-                        document.querySelectorAll('#moveInsideBody .folder-item').forEach(i => i.style.background = '');
-                        newFolderItem.style.background = '#e8eaf6';
-                        moveInsideTargetFolderId = newFolderId;
-                    }
-                }, 100);
-            } catch (err) {
-                alert('Ошибка создания папки: ' + err.message);
-            }
-        };
-    }
-}
-
-async function createFolderInCurrent(folderName, parentId) {
-    const metadata = {
-        name: folderName,
-        mimeType: 'application/vnd.google-apps.folder',
-        parents: parentId === 'root' ? [] : [parentId]
-    };
-    const response = await fetch('https://www.googleapis.com/drive/v3/files', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(metadata)
-    });
-    const data = await response.json();
-    return data.id;
-}
-
-async function moveItemsToFolder(targetFolderId) {
-    if (moveInsideItems.length === 0) return;
-    
-    let successCount = 0;
-    let failCount = 0;
-    
-    for (const item of moveInsideItems) {
-        try {
-            const getResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${item.id}?fields=parents`, {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            const fileData = await getResponse.json();
-            const currentParent = fileData.parents ? fileData.parents[0] : 'root';
-            
-            let url = `https://www.googleapis.com/drive/v3/files/${item.id}`;
-            let addParents = '';
-            let removeParents = '';
-            
-            if (targetFolderId === 'root') {
-                addParents = 'root';
-            } else {
-                addParents = targetFolderId;
-            }
-            
-            if (currentParent && currentParent !== 'root') {
-                removeParents = currentParent;
-            }
-            
-            if (addParents) {
-                url += `?addParents=${addParents}`;
-                if (removeParents) {
-                    url += `&removeParents=${removeParents}`;
-                }
-            }
-            
-            const response = await fetch(url, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({})
-            });
-            
-            if (response.status === 401) {
-                const newToken = await refreshAccessToken();
-                if (newToken) {
-                    accessToken = newToken;
-                    const retryResponse = await fetch(url, {
-                        method: 'PATCH',
-                        headers: {
-                            'Authorization': `Bearer ${accessToken}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({})
-                    });
-                    if (!retryResponse.ok) {
-                        const errText = await retryResponse.text();
-                        throw new Error(`HTTP ${retryResponse.status}: ${errText}`);
-                    }
-                } else {
-                    throw new Error('Token expired');
-                }
-            } else if (!response.ok) {
-                const errText = await response.text();
-                throw new Error(`HTTP ${response.status}: ${errText}`);
-            }
-            successCount++;
-        } catch (err) {
-            console.error(`Error moving ${item.name}:`, err);
-            alert(`Ошибка перемещения "${item.name}": ${err.message}`);
-            failCount++;
-        }
-    }
-    
-    if (failCount === 0) {
-        alert(`Перемещено ${successCount} элементов`);
-    } else {
-        alert(`Перемещено: ${successCount}, Ошибок: ${failCount}`);
-    }
-    
-    moveInsideItems = [];
-    selectedFiles.clear();
-    updateHeaderButtonsState();
-    await loadItems();
-}
-
-// ========== ФУНКЦИИ ДЛЯ АРХИВИРОВАНИЯ ==========
-async function downloadFileAsBlobWithCancel(fileId, signal) {
-    let response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` },
-        signal: signal
-    });
-    
-    if (response.status === 401) {
-        const newToken = await refreshAccessToken();
-        if (newToken) {
-            accessToken = newToken;
-            response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-                headers: { 'Authorization': `Bearer ${accessToken}` },
-                signal: signal
-            });
-        } else {
-            throw new Error('Token expired');
-        }
-    }
-    
-    return await response.blob();
-}
-
-async function downloadFileAsBlob(fileId) {
-    let response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-    
-    if (response.status === 401) {
-        const newToken = await refreshAccessToken();
-        if (newToken) {
-            accessToken = newToken;
-            response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-        } else {
-            throw new Error('Token expired');
-        }
-    }
-    
-    return await response.blob();
-}
-
-async function addFolderToZipWithCancel(zip, folderId, folderName, signal, onProgress, totalSize, processedSize) {
-    if (signal && signal.aborted) throw new Error('Cancelled');
-    
-    const folderZip = zip.folder(folderName);
-    const items = await getItems(folderId);
-    
-    for (const item of items) {
-        if (signal && signal.aborted) throw new Error('Cancelled');
-        
-        if (item.mimeType === 'application/vnd.google-apps.folder') {
-            await addFolderToZipWithCancel(folderZip, item.id, item.name, signal, onProgress, totalSize, processedSize);
-        } else {
-            const fileBlob = await downloadFileAsBlobWithCancel(item.id, signal);
-            folderZip.file(item.name, fileBlob);
-            processedSize.current += parseInt(item.size) || 0;
-            if (onProgress && totalSize) {
-                const percent = Math.min(100, Math.round((processedSize.current / totalSize) * 100));
-                onProgress(percent);
-            }
-        }
-    }
-}
-
-async function addFolderToZip(zip, folderId, folderName) {
-    const folderZip = zip.folder(folderName);
-    const items = await getItems(folderId);
-    
-    for (const item of items) {
-        if (item.mimeType === 'application/vnd.google-apps.folder') {
-            await addFolderToZip(folderZip, item.id, item.name);
-        } else {
-            const fileBlob = await downloadFileAsBlob(item.id);
-            folderZip.file(item.name, fileBlob);
-        }
-    }
-}
-
-async function archiveAndDownloadWithProgress(items) {
-    const abortController = new AbortController();
-    globalProgress = {
-        type: 'archive',
-        percent: 0,
-        cancelController: abortController
-    };
-    renderItemsList(allItems);
-    
-    try {
-        const zip = new JSZip();
-        let totalSize = 0;
-        
-        for (const item of items) {
-            if (abortController.signal.aborted) throw new Error('Cancelled');
-            if (item.mimeType === 'application/vnd.google-apps.folder') {
-                totalSize += await getFolderSize(item.id);
-            } else {
-                totalSize += parseInt(item.size) || 0;
-            }
-        }
-        
-        let processedSize = { current: 0 };
-        
-        const updateProgress = (percent) => {
-            if (globalProgress) {
-                globalProgress.percent = percent;
-                renderItemsList(allItems);
-            }
-        };
-        
-        for (const item of items) {
-            if (abortController.signal.aborted) throw new Error('Cancelled');
-            
-            if (item.mimeType === 'application/vnd.google-apps.folder') {
-                await addFolderToZipWithCancel(zip, item.id, item.name, abortController.signal, updateProgress, totalSize, processedSize);
-            } else {
-                const fileBlob = await downloadFileAsBlobWithCancel(item.id, abortController.signal);
-                zip.file(item.name, fileBlob);
-                processedSize.current += parseInt(item.size) || 0;
-                const percent = Math.min(100, Math.round((processedSize.current / totalSize) * 100));
-                updateProgress(percent);
-            }
-        }
-        
-        const content = await zip.generateAsync({ type: 'blob' });
-        const url = URL.createObjectURL(content);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `archive_${Date.now()}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        globalProgress = null;
-        renderItemsList(allItems);
-        alert(`Архив создан и скачан! Содержит ${items.length} элементов.`);
-    } catch (err) {
-        if (err.message === 'Cancelled') {
-            globalProgress = null;
-            renderItemsList(allItems);
-            alert(`Архивация отменена`);
-        } else {
-            alert('Ошибка создания архива: ' + err.message);
-            globalProgress = null;
-            renderItemsList(allItems);
-        }
-    }
-}
-
-async function archiveAndSaveWithProgress(items) {
-    const abortController = new AbortController();
-    globalProgress = {
-        type: 'archive',
-        percent: 0,
-        cancelController: abortController
-    };
-    renderItemsList(allItems);
-    
-    try {
-        const zip = new JSZip();
-        let totalSize = 0;
-        
-        for (const item of items) {
-            if (abortController.signal.aborted) throw new Error('Cancelled');
-            if (item.mimeType === 'application/vnd.google-apps.folder') {
-                totalSize += await getFolderSize(item.id);
-            } else {
-                totalSize += parseInt(item.size) || 0;
-            }
-        }
-        
-        let processedSize = { current: 0 };
-        
-        const updateProgress = (percent) => {
-            if (globalProgress) {
-                globalProgress.percent = percent;
-                renderItemsList(allItems);
-            }
-        };
-        
-        for (const item of items) {
-            if (abortController.signal.aborted) throw new Error('Cancelled');
-            
-            if (item.mimeType === 'application/vnd.google-apps.folder') {
-                await addFolderToZipWithCancel(zip, item.id, item.name, abortController.signal, updateProgress, totalSize, processedSize);
-            } else {
-                const fileBlob = await downloadFileAsBlobWithCancel(item.id, abortController.signal);
-                zip.file(item.name, fileBlob);
-                processedSize.current += parseInt(item.size) || 0;
-                const percent = Math.min(100, Math.round((processedSize.current / totalSize) * 100));
-                updateProgress(percent);
-            }
-        }
-        
-        const content = await zip.generateAsync({ type: 'blob' });
-        const archiveName = `archive_${Date.now()}.zip`;
-        const archiveSize = content.size;
-        
-        const currentUsed = usedBytes;
-        const newTotal = currentUsed + archiveSize;
-        const limitBytes = limitGB * 1024 * 1024 * 1024;
-        
-        if (newTotal > limitBytes) {
-            const needGB = (newTotal - limitBytes) / (1024 * 1024 * 1024);
-            const userChoice = confirm(
-                `Недостаточно места в хранилище!\n\n` +
-                `Текущее использование: ${formatFileSize(currentUsed)}\n` +
-                `Лимит: ${limitGB} ГБ\n` +
-                `Необходимо дополнительно: ~${needGB.toFixed(2)} ГБ\n\n` +
-                `Хотите перейти в меню агрегатора для увеличения хранилища?`
-            );
-            if (userChoice) {
-                window.open('https://one.google.com/storage', '_blank');
-            }
-            globalProgress = null;
-            renderItemsList(allItems);
-            return;
-        }
-        
-        const metadata = {
-            name: archiveName,
-            mimeType: 'application/zip',
-            parents: currentFolderId === 'root' ? [] : [currentFolderId]
-        };
-        
-        const formData = new FormData();
-        formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-        formData.append('file', content, archiveName);
-        
-        let response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${accessToken}` },
-            body: formData,
-            signal: abortController.signal
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${accessToken}` },
-                    body: formData,
-                    signal: abortController.signal
-                });
-            }
-        }
-        
-        const result = await response.json();
-        if (result.id) {
-            alert(`Архив "${archiveName}" сохранён в хранилище! Содержит ${items.length} элементов.`);
-            globalProgress = null;
-            await loadItems();
-        } else {
-            alert('Ошибка сохранения архива');
-            globalProgress = null;
-            renderItemsList(allItems);
-        }
-    } catch (err) {
-        if (err.message === 'Cancelled') {
-            globalProgress = null;
-            renderItemsList(allItems);
-            alert(`Архивация отменена`);
-        } else {
-            alert('Ошибка: ' + err.message);
-            globalProgress = null;
-            renderItemsList(allItems);
-        }
-    }
-}
-
-async function archiveAndShareWithProgress(items, targetToken, targetName, targetFolderId, targetService) {
-    const abortController = new AbortController();
-    globalProgress = {
-        type: 'move',
-        percent: 0,
-        cancelController: abortController
-    };
-    renderItemsList(allItems);
-    
-    try {
-        const zip = new JSZip();
-        let totalSize = 0;
-        
-        for (const item of items) {
-            if (abortController.signal.aborted) throw new Error('Cancelled');
-            if (item.mimeType === 'application/vnd.google-apps.folder') {
-                totalSize += await getFolderSize(item.id);
-            } else {
-                totalSize += parseInt(item.size) || 0;
-            }
-        }
-        
-        let processedSize = { current: 0 };
-        
-        const updateProgress = (percent) => {
-            if (globalProgress) {
-                globalProgress.percent = percent;
-                renderItemsList(allItems);
-            }
-        };
-        
-        for (const item of items) {
-            if (abortController.signal.aborted) throw new Error('Cancelled');
-            
-            if (item.mimeType === 'application/vnd.google-apps.folder') {
-                await addFolderToZipWithCancel(zip, item.id, item.name, abortController.signal, updateProgress, totalSize, processedSize);
-            } else {
-                const fileBlob = await downloadFileAsBlobWithCancel(item.id, abortController.signal);
-                zip.file(item.name, fileBlob);
-                processedSize.current += parseInt(item.size) || 0;
-                const percent = Math.min(100, Math.round((processedSize.current / totalSize) * 100));
-                updateProgress(percent);
-            }
-        }
-        
-        const content = await zip.generateAsync({ type: 'blob' });
-        const archiveName = `archive_${Date.now()}.zip`;
-        
-        let uploadSuccess = false;
-        let currentToken = targetToken;
-        
-        if (targetService === 'google') {
-            const metadata = {
-                name: archiveName,
-                mimeType: 'application/zip',
-                parents: targetFolderId === 'root' ? [] : [targetFolderId]
-            };
-            
-            const formData = new FormData();
-            formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            formData.append('file', content, archiveName);
-            
-            let response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${currentToken}` },
-                body: formData,
-                signal: abortController.signal
-            });
-            
-            if (response.status === 401) {
-                const newToken = await refreshAccessToken();
-                if (newToken) {
-                    accessToken = newToken;
-                    response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${accessToken}` },
-                        body: formData,
-                        signal: abortController.signal
-                    });
-                } else {
-                    throw new Error('Token expired');
-                }
-            }
-            
-            const result = await response.json();
-            uploadSuccess = !!result.id;
-        } else if (targetService === 'yandex') {
-            let targetPath = targetFolderId === '/' ? `/${archiveName}` : `${targetFolderId}/${archiveName}`;
-            
-            let uploadUrlResponse = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/upload?path=${encodeURIComponent(targetPath)}&overwrite=true`, {
-                method: 'GET',
-                headers: { 'Authorization': `OAuth ${currentToken}` }
-            });
-            
-            if (uploadUrlResponse.status === 401) {
-                const newToken = await refreshTargetToken('yandex', currentToken);
-                if (newToken) {
-                    currentToken = newToken;
-                    uploadUrlResponse = await fetch(`https://cloud-api.yandex.net/v1/disk/resources/upload?path=${encodeURIComponent(targetPath)}&overwrite=true`, {
-                        method: 'GET',
-                        headers: { 'Authorization': `OAuth ${currentToken}` }
-                    });
-                } else {
-                    throw new Error('Token expired');
-                }
-            }
-            
-            const uploadData = await uploadUrlResponse.json();
-            const uploadUrl = uploadData.href;
-            
-            let uploadResponse = await fetch(uploadUrl, {
-                method: 'PUT',
-                body: content,
-                signal: abortController.signal
-            });
-            
-            uploadSuccess = uploadResponse.ok;
-        }
-        
-        if (uploadSuccess) {
-            globalProgress = null;
-            renderItemsList(allItems);
-            alert(`Архив "${archiveName}" перемещён в облако "${targetName}"! Содержит ${items.length} элементов.`);
-            await loadItems();
-        } else {
-            throw new Error('Upload failed');
-        }
-    } catch (err) {
-        if (err.message === 'Cancelled') {
-            globalProgress = null;
-            renderItemsList(allItems);
-            alert(`Перемещение архива отменено`);
-        } else {
-            alert('Ошибка перемещения архива: ' + err.message);
-            globalProgress = null;
-            renderItemsList(allItems);
-        }
-    }
-}
-
-async function showArchiveMenuForItems(items) {
-    const modal = document.createElement('div');
-    modal.className = 'share-modal';
-    modal.style.display = 'flex';
-    modal.innerHTML = `
-        <div class="share-modal-content" style="width: 350px;">
-            <h3>Архивировать (${items.length} элементов)</h3>
-            <div class="share-cloud-list" style="margin-bottom: 10px;">
-                <div class="share-cloud-item" data-action="download">
-                    <div class="share-cloud-icon" style="font-size: 32px;">📥</div>
-                    <div class="share-cloud-info">
-                        <div class="share-cloud-name">Архивировать и скачать</div>
-                        <div class="share-cloud-email">Создать архив и скачать на устройство</div>
-                    </div>
-                </div>
-                <div class="share-cloud-item" data-action="save">
-                    <div class="share-cloud-icon" style="font-size: 32px;">💾</div>
-                    <div class="share-cloud-info">
-                        <div class="share-cloud-name">Архивировать и сохранить</div>
-                        <div class="share-cloud-email">Создать архив и сохранить в хранилище</div>
-                    </div>
-                </div>
-                <div class="share-cloud-item" data-action="share">
-                    <div class="share-cloud-icon" style="font-size: 32px;">☁️</div>
-                    <div class="share-cloud-info">
-                        <div class="share-cloud-name">Архивировать и переместить</div>
-                        <div class="share-cloud-email">Создать архив и переместить в другое облако</div>
-                    </div>
-                </div>
-            </div>
-            <button class="share-cancel-btn" id="archiveMenuCancelBtn">Отмена</button>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    
-    const handleCancel = () => modal.remove();
-    modal.querySelector('#archiveMenuCancelBtn').onclick = handleCancel;
-    
-    modal.querySelectorAll('.share-cloud-item').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const action = btn.dataset.action;
-            modal.remove();
-            
-            if (action === 'download') {
-                await archiveAndDownloadWithProgress(items);
-            } else if (action === 'save') {
-                await archiveAndSaveWithProgress(items);
-            } else if (action === 'share') {
-                const allAccounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
-                const otherAccounts = allAccounts.filter(acc => acc.email !== email);
-                
-                if (otherAccounts.length === 0) {
-                    alert('Нет других подключенных облаков. Сначала подключите хотя бы одно другое облако.');
-                    return;
-                }
-                
-                const cloudModal = document.createElement('div');
-                cloudModal.className = 'share-modal';
-                cloudModal.style.display = 'flex';
-                cloudModal.innerHTML = `
-                    <div class="share-modal-content" style="width: 400px;">
-                        <h3>Выберите облако для перемещения архива</h3>
-                        <div class="share-cloud-list" id="archiveShareCloudsList"></div>
-                        <button class="share-cancel-btn" id="archiveShareCancelBtn">Отмена</button>
-                    </div>
-                `;
-                document.body.appendChild(cloudModal);
-                
-                const container = cloudModal.querySelector('#archiveShareCloudsList');
-                let selectedTarget = null;
-                
-                otherAccounts.forEach(acc => {
-                    const item = document.createElement('div');
-                    item.className = 'share-cloud-item';
-                    item.innerHTML = `
-                        <img src="assets/cloud-icon-${acc.service}.png" class="share-cloud-icon" alt="${acc.service}">
-                        <div class="share-cloud-info">
-                            <div class="share-cloud-name">${escapeHtml(acc.name)}</div>
-                            <div class="share-cloud-email">${escapeHtml(acc.email)}</div>
-                        </div>
-                    `;
-                    item.addEventListener('click', async () => {
-                        selectedTarget = acc;
-                        cloudModal.remove();
-                        
-                        const folders = await loadFoldersForTargetUniversal(acc.accessToken, acc.service);
-                        
-                        const folderModal = document.createElement('div');
-                        folderModal.className = 'folder-select-modal';
-                        folderModal.style.display = 'flex';
-                        folderModal.innerHTML = `
-                            <div class="folder-select-content">
-                                <div class="folder-select-header">
-                                    <h3>Выберите папку для перемещения архива</h3>
-                                    <button class="folder-select-close" id="folderSelectCloseBtn">×</button>
-                                </div>
-                                <div class="folder-select-body" id="folderSelectBody">
-                                    <div class="loading">Загрузка папок...</div>
-                                </div>
-                                <div class="folder-select-footer">
-                                    <button class="folder-select-btn cancel" id="folderSelectCancelBtn">Отмена</button>
-                                    <button class="folder-select-btn create" id="folderSelectCreateBtn">➕ Создать папку</button>
-                                    <button class="folder-select-btn" id="folderSelectConfirmBtn">Переместить сюда</button>
-                                </div>
-                            </div>
-                        `;
-                        document.body.appendChild(folderModal);
-                        
-                        let selectedFolderId = acc.service === 'yandex' ? '/' : 'root';
-                        
-                        const renderFolderSelect = (foldersList) => {
-                            const body = folderModal.querySelector('#folderSelectBody');
-                            
-                            let html = '<div class="new-folder-input">';
-                            html += '<input type="text" id="newFolderNameInput" placeholder="Название новой папки">';
-                            html += '<button id="createNewFolderBtn">Создать</button>';
-                            html += '</div>';
-                            
-                            if (!foldersList || foldersList.length === 0) {
-                                html += '<div class="loading">Папки не найдены</div>';
-                            } else {
-                                foldersList.forEach(folder => {
-                                    const folderValue = folder.path || folder.id;
-                                    html += `
-                                        <div class="folder-item" data-id="${folderValue}" data-path="${folderValue}">
-                                            <div class="folder-icon">📁</div>
-                                            <div class="folder-name">${escapeHtml(folder.name)}</div>
-                                        </div>
-                                    `;
-                                });
-                            }
-                            
-                            if (acc.service === 'yandex') {
-                                html += `
-                                    <div class="folder-item" data-id="/" data-path="/">
-                                        <div class="folder-icon">📁</div>
-                                        <div class="folder-name">Корень</div>
-                                    </div>
-                                `;
-                            } else {
-                                html += `
-                                    <div class="folder-item" data-id="root" data-path="root">
-                                        <div class="folder-icon">📁</div>
-                                        <div class="folder-name">Корень (Root)</div>
-                                    </div>
-                                `;
-                            }
-                            
-                            body.innerHTML = html;
-                            
-                            body.querySelectorAll('.folder-item').forEach(folderItem => {
-                                folderItem.addEventListener('click', () => {
-                                    body.querySelectorAll('.folder-item').forEach(i => i.style.background = '');
-                                    folderItem.style.background = '#e8eaf6';
-                                    selectedFolderId = folderItem.dataset.path || folderItem.dataset.id;
-                                });
-                            });
-                            
-                            const createNewBtn = body.querySelector('#createNewFolderBtn');
-                            if (createNewBtn) {
-                                createNewBtn.onclick = async () => {
-                                    const newFolderName = body.querySelector('#newFolderNameInput').value.trim();
-                                    if (!newFolderName) {
-                                        alert('Введите название папки');
-                                        return;
-                                    }
-                                    try {
-                                        const newFolderId = await createFolderInTargetUniversal(selectedTarget.accessToken, newFolderName, selectedFolderId, selectedTarget.service);
-                                        alert(`Папка "${newFolderName}" создана!`);
-                                        const updatedFolders = await loadFoldersForTargetUniversal(selectedTarget.accessToken, selectedTarget.service);
-                                        renderFolderSelect(updatedFolders);
-                                        setTimeout(() => {
-                                            const newFolderItem = body.querySelector(`.folder-item[data-id="${newFolderId}"]`);
-                                            if (newFolderItem) {
-                                                body.querySelectorAll('.folder-item').forEach(i => i.style.background = '');
-                                                newFolderItem.style.background = '#e8eaf6';
-                                                selectedFolderId = newFolderId;
-                                            }
-                                        }, 100);
-                                    } catch (err) {
-                                        alert('Ошибка создания папки: ' + err.message);
-                                    }
-                                };
-                            }
-                        };
-                        
-                        const foldersList = await loadFoldersForTargetUniversal(acc.accessToken, acc.service);
-                        renderFolderSelect(foldersList);
-                        
-                        folderModal.querySelector('#folderSelectCloseBtn').onclick = () => folderModal.remove();
-                        folderModal.querySelector('#folderSelectCancelBtn').onclick = () => folderModal.remove();
-                        folderModal.querySelector('#folderSelectConfirmBtn').onclick = async () => {
-                            folderModal.remove();
-                            await archiveAndShareWithProgress(items, selectedTarget.accessToken, selectedTarget.name, selectedFolderId, selectedTarget.service);
-                        };
-                    });
-                    container.appendChild(item);
-                });
-                
-                cloudModal.querySelector('#archiveShareCancelBtn').onclick = () => cloudModal.remove();
-            }
-        });
-    });
-}
-
-async function createFolderInTarget(targetToken, folderName, parentId) {
-    try {
-        const metadata = {
-            name: folderName,
-            mimeType: 'application/vnd.google-apps.folder',
-            parents: parentId === 'root' ? [] : [parentId]
-        };
-        const response = await fetch('https://www.googleapis.com/drive/v3/files', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${targetToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(metadata)
-        });
-        const data = await response.json();
-        return data.id;
-    } catch (err) {
-        console.error('Create folder error:', err);
-        throw err;
-    }
-}
-
-async function refreshTargetToken(service, oldToken) {
-    try {
-        const accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
-        const account = accounts.find(acc => acc.accessToken === oldToken && acc.service === service);
-        if (!account || !account.refreshToken) return null;
-        
-        const response = await fetch(PROXY_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                refresh_token: account.refreshToken, 
-                grant_type: 'refresh_token',
-                service: service
-            })
-        });
-        const data = await response.json();
-        if (data.access_token) {
-            account.accessToken = data.access_token;
-            localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
-            return data.access_token;
-        }
-        return null;
-    } catch (err) {
-        console.error('Refresh target token error:', err);
-        return null;
-    }
-}
-
-// ========== ФУНКЦИИ ДЛЯ ПРОСМОТРА ФАЙЛОВ С АССОЦИАЦИЯМИ ==========
-async function showProgramChooser(fileItem) {
-    const ext = getFileExtension(fileItem.name).toLowerCase();
-    const fileName = fileItem.name;
-    const fileId = fileItem.id;
-    
-    const modal = document.createElement('div');
-    modal.className = 'share-modal';
-    modal.style.display = 'flex';
-    modal.innerHTML = `
-        <div class="share-modal-content" style="width: 400px;">
-            <h3>Открыть файл "${escapeHtml(fileName)}"</h3>
-            <div class="share-cloud-list" style="margin-bottom: 10px;">
-                <div class="share-cloud-item" data-action="system">
-                    <div class="share-cloud-icon" style="font-size: 32px;">💻</div>
-                    <div class="share-cloud-info">
-                        <div class="share-cloud-name">Системная программа по умолчанию</div>
-                        <div class="share-cloud-email">Открыть в программе, назначенной в системе для .${ext}</div>
-                    </div>
-                </div>
-                <div class="share-cloud-item" data-action="browser">
-                    <div class="share-cloud-icon" style="font-size: 32px;">🌐</div>
-                    <div class="share-cloud-info">
-                        <div class="share-cloud-name">Встроенный просмотр</div>
-                        <div class="share-cloud-email">Если поддерживается браузером</div>
-                    </div>
-                </div>
-                <div class="share-cloud-item" data-action="download">
-                    <div class="share-cloud-icon" style="font-size: 32px;">📥</div>
-                    <div class="share-cloud-info">
-                        <div class="share-cloud-name">Скачать и открыть</div>
-                        <div class="share-cloud-email">Скачать файл и открыть в системе</div>
-                    </div>
-                </div>
-            </div>
-            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="rememberChoice" style="width: 18px; height: 18px;">
-                    <span>Запомнить выбор для всех файлов .${ext}</span>
-                </label>
-            </div>
-            <button class="share-cancel-btn" id="programChooserCancelBtn" style="margin-top: 15px;">Отмена</button>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    
-    const handleChoice = async (action) => {
-        const remember = modal.querySelector('#rememberChoice').checked;
-        if (remember && action !== 'cancel') {
-            setAssociation(ext, action);
-        }
-        modal.remove();
-        
-        if (action === 'system') {
-            await openWithSystemDefault(fileId, fileName);
-        } else if (action === 'browser') {
-            await openInBrowser(fileId, fileName);
-        } else if (action === 'download') {
-            await downloadAndOpen(fileId, fileName);
-        }
-    };
-    
-    modal.querySelectorAll('.share-cloud-item').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const action = btn.dataset.action;
-            handleChoice(action);
-        });
-    });
-    
-    modal.querySelector('#programChooserCancelBtn').onclick = () => {
-        modal.remove();
-    };
-}
-
-async function openWithSystemDefault(fileId, fileName) {
-    try {
-        await downloadFile(fileId, fileName);
-        alert(`Файл "${fileName}" скачан. Откройте его в папке "Загрузки"`);
-    } catch (err) {
-        alert('Ошибка: ' + err.message);
-    }
-}
-
-async function openInBrowser(fileId, fileName) {
-    try {
-        const blob = await downloadFileAsBlob(fileId);
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-    } catch (err) {
-        alert('Ошибка: ' + err.message);
-    }
-}
-
-async function downloadAndOpen(fileId, fileName) {
-    await openWithSystemDefault(fileId, fileName);
-}
-
-async function openFileWithAssociation(fileItem) {
-    const fileName = fileItem.name;
-    const fileId = fileItem.id;
-    const ext = getFileExtension(fileName).toLowerCase();
-    
-    const association = getAssociation(ext);
-    
-    if (association === 'system') {
-        await openWithSystemDefault(fileId, fileName);
-    } else if (association === 'browser') {
-        await openInBrowser(fileId, fileName);
-    } else if (association === 'download') {
-        await downloadAndOpen(fileId, fileName);
-    } else {
-        await showProgramChooser(fileItem);
-    }
-}
-
-// ========== ФУНКЦИИ ДЛЯ ПЕРЕИМЕНОВАНИЯ (ИСПРАВЛЕНА) ==========
-async function renameItem(itemId, oldFullName, newNameWithoutExt, isFolder) {
-    const item = allItems.find(i => i.id === itemId);
-    if (!item) return;
-    
-    let newFullName;
-    if (isFolder) {
-        newFullName = newNameWithoutExt;
-    } else {
-        // Берём расширение из ОРИГИНАЛЬНОГО имени файла (из item.name)
-        const originalName = item.name;
-        const lastDot = originalName.lastIndexOf('.');
-        const ext = lastDot !== -1 ? originalName.substring(lastDot) : '';
-        newFullName = newNameWithoutExt + ext;
-    }
-    
-    try {
-        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}`, {
-            method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ name: newFullName })
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ name: newFullName })
-                });
-            }
-        }
-        
-        if (response.ok) {
-            alert('Переименовано!');
-            await loadItems();
-        } else {
-            alert('Ошибка переименования');
-        }
-    } catch (err) {
-        alert('Ошибка: ' + err.message);
-    }
-}
-
-async function copyFile(fileId, fileName) {
-    const { name, ext } = getBaseFileName(fileName);
-    const newName = name + ' (Копия)' + ext;
-    try {
-        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/copy`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ name: newName })
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/copy`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ name: newName })
-                });
-            }
-        }
-        
-        if (response.ok) {
-            alert(`Файл "${fileName}" скопирован!`);
-            await loadItems();
-        } else {
-            const errData = await response.json();
-            alert('Ошибка копирования: ' + (errData.error?.message || 'неизвестная ошибка'));
-        }
-    } catch (err) {
-        alert('Ошибка: ' + err.message);
-    }
-}
-
-async function getFileLink(fileId) {
-    try {
-        let response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=webViewLink`, {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=webViewLink`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-            } else {
-                throw new Error('Token expired');
-            }
-        }
-        
-        const data = await response.json();
-        return data.webViewLink;
-    } catch (err) {
-        console.error('Get link error:', err);
-        throw err;
-    }
-}
-
-async function uploadFile(file, parentFolderId = currentFolderId) {
-    const metadata = { name: file.name, mimeType: file.type, parents: parentFolderId === 'root' ? [] : [parentFolderId] };
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-    form.append('file', file);
-    try {
-        let response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${accessToken}` },
-            body: form
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${accessToken}` },
-                    body: form
-                });
-            }
-        }
-        
-        const result = await response.json();
-        if (result.id) {
-            alert(`Файл "${file.name}" загружен!`);
-            await loadItems();
-            return true;
-        } else {
-            alert('Ошибка загрузки');
-            return false;
-        }
-    } catch (err) {
-        alert('Ошибка: ' + err.message);
-        return false;
-    }
-}
-
-async function createFolder(folderName, parentFolderId = currentFolderId) {
-    const metadata = {
-        name: folderName,
-        mimeType: 'application/vnd.google-apps.folder',
-        parents: parentFolderId === 'root' ? [] : [parentFolderId]
-    };
-    try {
-        let response = await fetch('https://www.googleapis.com/drive/v3/files', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(metadata)
-        });
-        
-        if (response.status === 401) {
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                accessToken = newToken;
-                response = await fetch('https://www.googleapis.com/drive/v3/files', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(metadata)
-                });
-            }
-        }
-        
-        if (response.ok) {
-            alert(`Папка "${folderName}" создана!`);
-            await loadItems();
-            return true;
-        } else {
-            alert('Ошибка создания папки');
-            return false;
-        }
-    } catch (err) {
-        alert('Ошибка: ' + err.message);
-        return false;
-    }
-}
-
 // ========== ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ ==========
+
 async function loadItems() {
     const container = document.getElementById('filesContainer');
     if (!container) return;
@@ -3029,53 +2890,6 @@ async function loadItems() {
             container.innerHTML = `<div class="loading">Ошибка загрузки: ${err.message}</div>`;
         }
     }
-}
-
-// ========== ХЛЕБНЫЕ КРОШКИ (НАВИГАЦИЯ) ==========
-
-function updateBreadcrumbNavigation() {
-    const container = document.getElementById('breadcrumbContainer');
-    if (!container) return;
-    
-    if (typeof isTrashMode === 'undefined') return;
-    if (typeof folderPath === 'undefined') return;
-    
-    if (isTrashMode) {
-        container.innerHTML = '';
-        return;
-    }
-    
-    let html = '';
-    
-    folderPath.forEach((folder, index) => {
-        const isLast = index === folderPath.length - 1;
-        const folderName = folder.name === 'Корень' ? 'Хранилище' : folder.name;
-        
-        if (isLast) {
-            html += `<span class="breadcrumb-current">${escapeHtml(folderName)}</span>`;
-        } else {
-            html += `<a class="breadcrumb-item" data-folder-id="${folder.id}" data-folder-name="${folder.name}">${escapeHtml(folderName)}</a>`;
-            html += `<span class="breadcrumb-separator">›</span>`;
-        }
-    });
-    
-    container.innerHTML = html;
-    
-    container.querySelectorAll('.breadcrumb-item').forEach(link => {
-        link.addEventListener('click', async (e) => {
-            e.preventDefault();
-            const folderId = link.dataset.folderId;
-            
-            const index = folderPath.findIndex(f => f.id === folderId);
-            if (index !== -1) {
-                folderPath = folderPath.slice(0, index + 1);
-                currentFolderId = folderId;
-                updateBreadcrumb();
-                updateBreadcrumbNavigation();
-                await loadItems();
-            }
-        });
-    });
 }
 
 // ========== ЗАМОЧЕК И ПЕРЕКЛЮЧЕНИЕ ГБ/ТБ ==========
@@ -3164,8 +2978,6 @@ function toggleLimitUnit() {
         input.step = '1';
     }
 }
-
-// ========== ПОЛУЧЕНИЕ РЕАЛЬНОГО ЛИМИТА ==========
 
 async function initRealLimit() {
     try {
@@ -3283,10 +3095,7 @@ document.getElementById('printBtn').onclick = async () => {
     }
     
     const fileName = item.name.toLowerCase();
-    const printFormats = [
-        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp',
-        '.pdf', '.txt', '.doc', '.docx', '.rtf', '.odt'
-    ];
+    const printFormats = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.pdf', '.txt', '.doc', '.docx', '.rtf', '.odt'];
     
     const isPrintFormat = printFormats.some(ext => fileName.endsWith(ext));
     if (!isPrintFormat) {
@@ -3295,11 +3104,7 @@ document.getElementById('printBtn').onclick = async () => {
     }
     
     try {
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${itemId}?alt=media`, {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        
-        const blob = await response.blob();
+        const blob = await downloadFileAsBlob(itemId);
         const url = URL.createObjectURL(blob);
         
         if (fileName.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/)) {
@@ -3378,14 +3183,6 @@ document.getElementById('shareBtn').onclick = () => {
         return;
     }
     
-    const itemsToShare = [];
-    for (const id of selectedFiles) {
-        const item = allItems.find(i => i.id === id);
-        if (item) {
-            itemsToShare.push(item);
-        }
-    }
-    
     const allAccounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
     const otherAccounts = allAccounts.filter(acc => acc.email !== email);
     
@@ -3395,14 +3192,17 @@ document.getElementById('shareBtn').onclick = () => {
     }
     
     if (typeof showShareCloudModal === 'function') {
-        const firstItem = itemsToShare[0];
-        let size = 0;
-        if (firstItem.mimeType === 'application/vnd.google-apps.folder') {
-            size = window.folderSizes?.[firstItem.id] || 0;
-        } else {
-            size = parseInt(firstItem.size) || 0;
+        const itemId = Array.from(selectedFiles)[0];
+        const item = allItems.find(i => i.id === itemId);
+        if (item) {
+            let size = 0;
+            if (item.mimeType === 'application/vnd.google-apps.folder') {
+                size = window.folderSizes?.[itemId] || 0;
+            } else {
+                size = parseInt(item.size) || 0;
+            }
+            showShareCloudModal(itemId, item.name, item.mimeType === 'application/vnd.google-apps.folder', size, null, 'google');
         }
-        showShareCloudModal(firstItem.id, firstItem.name, firstItem.mimeType === 'application/vnd.google-apps.folder', size, null, 'google');
     } else {
         alert('Функция перемещения между облаками временно недоступна');
     }
@@ -3462,7 +3262,14 @@ document.getElementById('saveBtn').onclick = async () => {
             alert('Ошибка скачивания: ' + err.message);
         }
     } else {
-        await downloadMultipleFiles(itemsToDownload);
+        for (const file of itemsToDownload) {
+            try {
+                await downloadFile(file.id, file.name);
+            } catch (err) {
+                console.error(`Ошибка скачивания ${file.name}:`, err);
+            }
+        }
+        alert(`Скачано ${itemsToDownload.length} файлов`);
     }
     
     selectedFiles.clear();
@@ -3797,6 +3604,7 @@ document.addEventListener('click', () => {
 });
 
 // ========== ИНИЦИАЛИЗАЦИЯ ==========
+
 if (!accessToken) {
     alert('Ошибка: токен не найден');
     window.location.href = 'index.html';
@@ -3839,53 +3647,9 @@ if (isLimitLocked && customLimit) {
     updateStats();
 }
 
-const style = document.createElement('style');
-style.textContent = `
-    .google-drive * { cursor: default; }
-    .google-drive button, .google-drive .action-btn, .google-drive .back-btn, 
-    .google-drive .limit-arrow-btn, .google-drive .share-cloud-item, .google-drive .folder-item, 
-    .google-drive .file-click-area, .google-drive .zip-file-item, .google-drive .extract-file-btn,
-    .google-drive #extractAllBtn, .google-drive #closeZipViewerBtn, .google-drive #viewerPrevBtn,
-    .google-drive #viewerNextBtn, .google-drive #viewerCloseBtn, .google-drive #viewerDownloadBtn,
-    .google-drive .cancel-progress-btn, .google-drive #playPauseBtn, .google-drive #playerPrevBtn,
-    .google-drive #playerNextBtn, .google-drive #fullscreenBtn, .google-drive #downloadMediaBtn,
-    .google-drive #playerCloseBtn { cursor: pointer; }
-    .google-drive .file-name-text, .google-drive .file-name { cursor: text; user-select: text; }
-    .google-drive input, .google-drive textarea, .google-drive .search-box, .google-drive .limit-input,
-    .google-drive #progressBar, .google-drive #volumeControl { cursor: pointer; }
-    .google-drive input[type="checkbox"] { cursor: pointer; }
-    .google-drive .disabled, .google-drive .action-btn.disabled { cursor: not-allowed !important; opacity: 0.5; }
-    .google-drive .file-list-item, .google-drive .file-grid-item { cursor: default; }
-    
-    .file-type-label {
-        font-size: 12px;
-        color: #666;
-        margin-left: 5px;
-    }
-    
-    .file-grid-item .file-type-label {
-        font-size: 11px;
-        display: inline;
-        margin-left: 3px;
-    }
-    
-    .header-title-wrapper {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        line-height: 1.2;
-    }
-    
-    .user-subtitle {
-        font-size: 10px;
-        opacity: 0.7;
-        margin-top: 2px;
-        max-width: 150px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-`;
-document.head.appendChild(style);
+window.loadItems = loadItems;
+window.loadGoogleItems = loadItems;
+window.showTrashMode = showTrashMode;
+window.getItems = getItems;
 
-console.log('storage-core.js fully loaded');
+console.log('storage-core.js fully loaded - with CORS fix and all features');
