@@ -3652,4 +3652,19 @@ window.loadGoogleItems = loadItems;
 window.showTrashMode = showTrashMode;
 window.getItems = getItems;
 
+const style = document.createElement('style');
+style.textContent = `
+    * { cursor: default; }
+    button, .action-btn, .back-btn, .limit-arrow-btn, .share-cloud-item, .folder-item, .file-click-area, 
+    .zip-file-item, .extract-file-btn, #extractAllBtn, #closeZipViewerBtn, #viewerPrevBtn, 
+    #viewerNextBtn, #viewerCloseBtn, #viewerDownloadBtn, .cancel-progress-btn, #playPauseBtn,
+    #playerPrevBtn, #playerNextBtn, #fullscreenBtn, #downloadMediaBtn, #playerCloseBtn { cursor: pointer; }
+    .file-name-text, .file-name { cursor: text; user-select: text; }
+    input, textarea, .search-box, .limit-input, #progressBar, #volumeControl { cursor: pointer; }
+    input[type="checkbox"] { cursor: pointer; }
+    .disabled, .action-btn.disabled { cursor: not-allowed !important; opacity: 0.5; }
+    .file-list-item, .file-grid-item { cursor: default; }
+`;
+document.head.appendChild(style);
+
 console.log('storage-core.js fully loaded - with CORS fix and all features');
