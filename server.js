@@ -2,13 +2,25 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Мидлвары
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Универсальная настройка статики: проверяем наличие папки public
+const publicPath = path.join(__dirname, 'public');
+if (fs.existsSync(publicPath)) {
+    // На сервере (GitHub) — используем папку public
+    app.use(express.static(publicPath));
+    console.log('📁 Serving static files from: public/');
+} else {
+    // Локально — используем корневую папку
+    app.use(express.static(__dirname));
+    console.log('📁 Serving static files from: root directory');
+}
 
 // Конфигурация OAuth
 const GOOGLE_CLIENT_ID = '944030768816-dknh5820s2knnbnrlde52q4hg2evcl2u.apps.googleusercontent.com';
@@ -16,11 +28,11 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const YANDEX_CLIENT_ID = '2dad4c5424324e1c8a7240b3d2a0f6c0';
 const YANDEX_CLIENT_SECRET = process.env.YANDEX_CLIENT_SECRET;
 
-// Определяем redirect_uri (принудительно https)
+// Определяем redirect_uri (динамически)
 const getRedirectUri = (req) => {
-    // Render использует HTTP внутри, но внешний URL — HTTPS
-    // Поэтому берём host и добавляем https принудительно
-    return `https://${req.get('host')}/index.html`;
+    const host = req.get('host');
+    const protocol = req.protocol;
+    return `${protocol}://${host}/index.html`;
 };
 
 // Эндпоинт для обмена кода на токен
@@ -79,7 +91,6 @@ app.post('/token', async (req, res) => {
     }
     
     if (service === 'google') {
-        console.log('[Google] Using redirect_uri:', redirect_uri);
         try {
             const response = await axios.post('https://oauth2.googleapis.com/token', null, {
                 params: {
@@ -162,6 +173,6 @@ app.get('/fetch-file', async (req, res) => {
 // Запуск сервера
 app.listen(PORT, () => {
     console.log(`✅ Nimbus server running on port ${PORT}`);
-    console.log(`   Frontend: https://localhost:${PORT}/index.html`);
-    console.log(`   Proxy: https://localhost:${PORT}/token`);
+    console.log(`   Frontend: http://localhost:${PORT}/index.html`);
+    console.log(`   Proxy: http://localhost:${PORT}/token`);
 });
