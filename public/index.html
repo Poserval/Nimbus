@@ -489,7 +489,7 @@
 
             <!-- ОПИСАНИЕ ПРИЛОЖЕНИЯ ДЛЯ GOOGLE -->
             <div class="app-description">
-                <p>Объединяет Google Drive и Яндекс.Диск в одном интерфейсе.<br>Управляйте файлами из разных облаков без переключения.</p>
+                <p>Объединяет облачные хранилища в одном интерфейсе.<br>Управляйте файлами из разных облаков без переключения.</p>
             </div>
 
             <div class="cloud-header">
@@ -561,12 +561,6 @@
         let accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
         let draggedCardIndex = null;
         let draggedCardElement = null;
-
-        // ========== ПРОВЕРКА АВТОРИЗАЦИИ ==========
-        const auth = JSON.parse(localStorage.getItem('nimbus_auth') || 'null');
-        if (!auth || auth.expires < Date.now()) {
-            window.location.href = 'reg/index-reg.html';
-        }
 
         function saveAccounts() {
             localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
