@@ -48,7 +48,6 @@
 
         .logo-area {
             text-align: center;
-            margin-top: 10px;
             margin-bottom: 30px;
             cursor: pointer;
             position: relative;
@@ -103,8 +102,7 @@
         .logo-area h1 {
             font-size: 22px;
             margin-top: 0px;
-           margin-bottom: 5px;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             color: #1a237e;
             text-shadow: 0 1px 2px rgba(255,255,255,0.5);
             position: relative;
@@ -119,6 +117,22 @@
             z-index: 2;
         }
 
+        /* Описание приложения */
+        .app-description {
+            text-align: center;
+            margin: 15px 0 10px 0;
+            padding: 10px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 16px;
+            backdrop-filter: blur(4px);
+        }
+        
+        .app-description p {
+            font-size: 13px;
+            color: #1a237e;
+            line-height: 1.4;
+        }
+
         .cloud-header {
             text-align: center;
             margin-bottom: 0px;
@@ -128,11 +142,6 @@
             width: 120px;
             height: 120px;
             object-fit: contain;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .cloud-header-icon:hover {
-            transform: scale(1.05);
         }
 
         .section-title {
@@ -142,20 +151,6 @@
             text-align: center;
             margin-bottom: 0px;
             margin-top: -10px;
-        }
-
-        .aggregators-wrapper {
-            overflow: hidden;
-            transition: max-height 0.4s ease-out, opacity 0.3s ease-out, margin 0.2s ease;
-        }
-        
-        .aggregators-wrapper.hide-aggregators {
-            max-height: 0 !important;
-            opacity: 0 !important;
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
         }
 
         .services-grid {
@@ -201,7 +196,6 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
-            margin-top: 15px;
         }
 
         .placeholder-card {
@@ -439,221 +433,46 @@
             background: #0d1642;
         }
         
+        .footer-links {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 1px solid rgba(26,35,126,0.2);
+            font-size: 12px;
+        }
+        
+        .footer-links a {
+            color: #1a237e;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+        
         button, .service-card, .placeholder-card, .cloud-card, .drag-handle,
-        .modal-content button {
+        .modal-content button, .back-btn, .action-btn, .limit-arrow-btn,
+        .share-cloud-item, .folder-item, .file-click-area, .zip-file-item,
+        .extract-file-btn, #extractAllBtn, #closeZipViewerBtn, #viewerPrevBtn,
+        #viewerNextBtn, #viewerCloseBtn, #viewerDownloadBtn, .cancel-progress-btn,
+        #playPauseBtn, #playerPrevBtn, #playerNextBtn, #fullscreenBtn,
+        #downloadMediaBtn, #playerCloseBtn {
             cursor: pointer;
         }
         
-        /* ========== МОБИЛЬНАЯ ВЕРСИЯ ========== */
-        @media (max-width: 768px) {
-            .service-card,
-            .placeholder-card,
-            .cloud-card {
-                background: rgba(255, 255, 255, 0.95);
-                backdrop-filter: none;
-                box-shadow: none;
-                border: 1px solid rgba(26, 35, 126, 0.15);
-            }
-            
-            body {
-                background-color: rgba(255, 255, 255, 0.8);
-                background-blend-mode: lighten;
-            }
-
-            .cloud-card:hover {
-                transform: none;
-                box-shadow: none;
-            }
-            
-            .sidebar .logout-btn {
-                display: none;
-            }
-            
-            .mobile-logout-btn {
-                position: fixed;
-                top: 10px;
-                left: 10px;
-                width: 45px;
-                height: 45px;
-                border-radius: 50%;
-                background: #f44336;
-                border: none;
-                z-index: 1001;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            }
-            
-            .mobile-logout-btn::before {
-                content: "🚪";
-                font-size: 24px;
-                color: white;
-            }
-            
-            /* ========== КОРЗИНА ДЛЯ УДАЛЕНИЯ ОБЛАКА (МОБИЛЬНАЯ) ========== */
-            .mobile-trash-bin {
-                position: fixed;
-                top: 10px;
-                right: 10px;
-                width: 45px;
-                height: 45px;
-                border-radius: 50%;
-                background: rgba(244, 67, 54, 0.9);
-                border: none;
-                z-index: 1001;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                transition: all 0.3s;
-                font-size: 24px;
-            }
-            
-            .mobile-trash-bin.active {
-                background: rgba(244, 67, 54, 1);
-                transform: scale(1.1);
-            }
-            
-            .sidebar {
-                width: 100%;
-                position: relative;
-                padding: 70px 15px 20px 15px;
-                height: auto;
-            }
-            
-            .main-content {
-                margin-left: 0;
-                padding: 20px 15px;
-            }
-            
-            .app-container {
-                flex-direction: column;
-            }
-            
-            .clouds-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 15px;
-            }
-            
-            .cloud-card {
-                width: 100%;
-                padding: 15px 8px;
-            }
-            
-            .cloud-card img {
-                width: 70px;
-                height: 70px;
-            }
-            
-            .cloud-card-name {
-                font-size: 13px;
-            }
-            
-            .cloud-card-email {
-                font-size: 9px;
-            }
-            
-            .percent-circle {
-                width: 38px;
-                height: 38px;
-                font-size: 11px;
-                margin: -15px auto 5px auto;
-            }
-            
-            .drag-handle {
-                display: none;
-            }
-            
-            .logo-area img {
-                width: 200px;
-                margin-top: -40px;
-            }
-            
-            .logo-area h1 {
-                font-size: 20px;
-                margin-top: -10px;
-            }
-            
-            .cloud-header-icon {
-                width: 150px;
-                height: 150px;
-                margin-top: -10px;
-            }
-            
-            .section-title {
-                font-size: 20px;
-            }
-            
-            .service-icon {
-                width: 35px;
-                height: 35px;
-            }
-            
-            .service-name {
-                font-size: 9px;
-            }
-            
-            .placeholder-icon {
-                width: 35px;
-                height: 35px;
-            }
-            
-            .placeholder-name {
-                font-size: 8px;
-            }
-            
-            .modal-content {
-                width: 90%;
-                margin: 0 15px;
-                padding: 20px;
-            }
-            
-            .modal-content img {
-                width: 50px;
-                height: 50px;
-            }
-            
-            .modal-content h3 {
-                font-size: 18px;
-            }
-            
-            /* Старая корзина скрыта на мобильных */
-            .trash-bin {
-                display: none;
-            }
-            
-            .aggregators-wrapper {
-                max-height: 500px;
-                transition: max-height 0.4s ease-out, opacity 0.3s ease-out;
-            }
-            
-            .aggregators-wrapper.hide-aggregators {
-                max-height: 0 !important;
-                opacity: 0 !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-            
-            .placeholder-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-                margin-top: 15px;
-            }
+        input, textarea, .search-box, .limit-input {
+            cursor: text;
         }
         
-        @media (min-width: 769px) and (max-width: 1024px) {
-            .clouds-grid {
-                grid-template-columns: repeat(auto-fill, minmax(160px, 160px));
-                gap: 20px;
-            }
-            
-            .cloud-card img {
-                width: 80px;
-                height: 80px;
-            }
+        input[type="checkbox"] {
+            cursor: pointer;
+        }
+        
+        .disabled, .action-btn.disabled {
+            cursor: not-allowed !important;
+            opacity: 0.5;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -668,42 +487,50 @@
                 <p>Cloud Manager</p>
             </div>
 
+            <!-- ОПИСАНИЕ ПРИЛОЖЕНИЯ ДЛЯ GOOGLE -->
+            <div class="app-description">
+                <p>Объединяет Google Drive и Яндекс.Диск в одном интерфейсе.<br>Управляйте файлами из разных облаков без переключения.</p>
+            </div>
+
             <div class="cloud-header">
-                <img src="assets/cloud-icon1.png" alt="Cloud" class="cloud-header-icon" id="toggleAggregatorsBtn">
+                <img src="assets/cloud-icon1.png" alt="Cloud" class="cloud-header-icon">
             </div>
 
             <div class="section-title">Облачные хранилища</div>
             
-            <div class="aggregators-wrapper" id="aggregatorsWrapper">
-                <div class="services-grid" id="servicesGrid">
-                    <div class="service-card" data-service="google">
-                        <img src="assets/cloud-icon-google.png" class="service-icon" alt="Google">
-                        <span class="service-name">Google Drive</span>
-                    </div>
-                    <div class="service-card" data-service="yandex">
-                        <img src="assets/cloud-icon-yandex.png" class="service-icon" alt="Yandex">
-                        <span class="service-name">Яндекс Диск</span>
-                    </div>
+            <div class="services-grid" id="servicesGrid">
+                <div class="service-card" data-service="google">
+                    <img src="assets/cloud-icon-google.png" class="service-icon" alt="Google">
+                    <span class="service-name">Google Drive</span>
                 </div>
+                <div class="service-card" data-service="yandex">
+                    <img src="assets/cloud-icon-yandex.png" class="service-icon" alt="Yandex">
+                    <span class="service-name">Яндекс Диск</span>
+                </div>
+            </div>
 
-                <div class="placeholder-grid" id="placeholderGrid">
-                    <div class="placeholder-card" data-placeholder="1">
-                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
-                        <span class="placeholder-name">Агрегатор 1</span>
-                    </div>
-                    <div class="placeholder-card" data-placeholder="2">
-                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
-                        <span class="placeholder-name">Агрегатор 2</span>
-                    </div>
-                    <div class="placeholder-card" data-placeholder="3">
-                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
-                        <span class="placeholder-name">Агрегатор 3</span>
-                    </div>
-                    <div class="placeholder-card" data-placeholder="4">
-                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
-                        <span class="placeholder-name">Агрегатор 4</span>
-                    </div>
+            <div class="placeholder-grid">
+                <div class="placeholder-card" data-placeholder="1">
+                    <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
+                    <span class="placeholder-name">Агрегатор 1</span>
                 </div>
+                <div class="placeholder-card" data-placeholder="2">
+                    <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
+                    <span class="placeholder-name">Агрегатор 2</span>
+                </div>
+                <div class="placeholder-card" data-placeholder="3">
+                    <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
+                    <span class="placeholder-name">Агрегатор 3</span>
+                </div>
+                <div class="placeholder-card" data-placeholder="4">
+                    <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
+                    <span class="placeholder-name">Агрегатор 4</span>
+                </div>
+            </div>
+            
+            <div class="footer-links">
+                <a href="/privacy.html" target="_blank">Политика конфиденциальности</a>
+                <button id="logoutBtn" style="background: #f44336; color: white; border: none; padding: 8px 16px; border-radius: 25px; cursor: pointer; margin-top: 20px;">🚪 Выйти</button>
             </div>
         </div>
 
@@ -734,9 +561,6 @@
         let accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
         let draggedCardIndex = null;
         let draggedCardElement = null;
-        let aggregatorsVisible = true;
-        let mobileDeleteMode = false;
-        let pendingDeleteCard = null;
 
         function saveAccounts() {
             localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
@@ -876,19 +700,6 @@
             document.querySelectorAll('.cloud-card[data-token]').forEach(card => {
                 card.addEventListener('click', (e) => {
                     if (e.target.classList.contains('drag-handle')) return;
-                    if (mobileDeleteMode) {
-                        e.stopPropagation();
-                        const email = card.dataset.email;
-                        const name = card.querySelector('.cloud-card-name')?.textContent || email;
-                        if (confirm(`Удалить облако "${name}"?\nEmail: ${email}\n\nЭто действие нельзя отменить.`)) {
-                            const index = parseInt(card.dataset.index);
-                            accounts = accounts.filter((_, idx) => idx !== index);
-                            saveAccounts();
-                            alert(`Облако "${name}" удалено`);
-                            disableMobileDeleteMode();
-                        }
-                        return;
-                    }
                     const token = card.dataset.token;
                     const email = card.dataset.email;
                     const service = card.dataset.service;
@@ -910,10 +721,6 @@
             
             cards.forEach(card => {
                 card.addEventListener('dragstart', (e) => {
-                    if (mobileDeleteMode) {
-                        e.preventDefault();
-                        return false;
-                    }
                     e.dataTransfer.setData('text/plain', card.dataset.index);
                     e.dataTransfer.effectAllowed = 'move';
                     card.classList.add('dragging');
@@ -998,31 +805,6 @@
                 draggedCardIndex = null;
                 draggedCardElement = null;
                 trashBin.classList.remove('active');
-            });
-        }
-        
-        function enableMobileDeleteMode() {
-            mobileDeleteMode = true;
-            const mobileTrashBin = document.getElementById('mobileTrashBin');
-            if (mobileTrashBin) {
-                mobileTrashBin.classList.add('active');
-            }
-            document.querySelectorAll('.cloud-card').forEach(card => {
-                card.style.opacity = '0.7';
-                card.style.cursor = 'pointer';
-            });
-            alert('Режим удаления: нажмите на облако для удаления');
-        }
-        
-        function disableMobileDeleteMode() {
-            mobileDeleteMode = false;
-            const mobileTrashBin = document.getElementById('mobileTrashBin');
-            if (mobileTrashBin) {
-                mobileTrashBin.classList.remove('active');
-            }
-            document.querySelectorAll('.cloud-card').forEach(card => {
-                card.style.opacity = '';
-                card.style.cursor = '';
             });
         }
 
@@ -1183,14 +965,9 @@
                 } else if (service === 'yandex') {
                     exchangeYandexCodeForToken(code);
                 } else {
-                    const userChoice = prompt('Выберите сервис для авторизации:\n1 - Google Drive\n2 - Яндекс.Диск');
-                    if (userChoice === '1') {
-                        exchangeGoogleCodeForToken(code);
-                    } else if (userChoice === '2') {
-                        exchangeYandexCodeForToken(code);
-                    } else {
-                        alert('Неверный выбор');
-                    }
+                    // Автоматическое определение: если нет service, но есть code — пробуем Google (или показываем ошибку)
+                    console.log('No service in URL, trying Google');
+                    exchangeGoogleCodeForToken(code);
                 }
             }
         }
@@ -1207,22 +984,6 @@
                 localStorage.removeItem('nimbus_auth');
                 alert('Вы вышли из системы');
                 window.location.href = 'reg/index-reg.html';
-            }
-        }
-
-        function toggleAggregators() {
-            const wrapper = document.getElementById('aggregatorsWrapper');
-            if (!wrapper) return;
-            
-            const isMobile = window.innerWidth <= 768;
-            if (!isMobile) return;
-            
-            if (aggregatorsVisible) {
-                wrapper.classList.add('hide-aggregators');
-                aggregatorsVisible = false;
-            } else {
-                wrapper.classList.remove('hide-aggregators');
-                aggregatorsVisible = true;
             }
         }
 
@@ -1265,71 +1026,14 @@
             }
         };
 
-        function addLogoutButton() {
-            const sidebar = document.querySelector('.sidebar');
-            const existingLogout = document.getElementById('logoutBtn');
-            if (existingLogout) return;
-            
-            const logoutBtn = document.createElement('button');
-            logoutBtn.id = 'logoutBtn';
-            logoutBtn.className = 'logout-btn';
-            logoutBtn.textContent = 'Выйти';
-            logoutBtn.style.cssText = `
-                margin-top: 20px;
-                padding: 10px;
-                background: rgba(244, 67, 54, 0.8);
-                color: white;
-                border: none;
-                border-radius: 25px;
-                cursor: pointer;
-                font-size: 14px;
-                transition: background 0.2s;
-            `;
-            logoutBtn.onmouseover = () => { logoutBtn.style.background = '#f44336'; };
-            logoutBtn.onmouseout = () => { logoutBtn.style.background = 'rgba(244, 67, 54, 0.8)'; };
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
             logoutBtn.onclick = logout;
-            sidebar.appendChild(logoutBtn);
-        }
-        
-        function addMobileLogoutButton() {
-            const existingMobileBtn = document.querySelector('.mobile-logout-btn');
-            if (existingMobileBtn) return;
-            
-            const mobileLogoutBtn = document.createElement('button');
-            mobileLogoutBtn.className = 'mobile-logout-btn';
-            mobileLogoutBtn.onclick = logout;
-            document.body.appendChild(mobileLogoutBtn);
-        }
-        
-        function addMobileTrashBin() {
-            const existingTrashBin = document.getElementById('mobileTrashBin');
-            if (existingTrashBin) return;
-            
-            const mobileTrashBin = document.createElement('button');
-            mobileTrashBin.id = 'mobileTrashBin';
-            mobileTrashBin.className = 'mobile-trash-bin';
-            mobileTrashBin.innerHTML = '🗑️';
-            mobileTrashBin.onclick = () => {
-                if (mobileDeleteMode) {
-                    disableMobileDeleteMode();
-                } else {
-                    enableMobileDeleteMode();
-                }
-            };
-            document.body.appendChild(mobileTrashBin);
-        }
-
-        const toggleBtn = document.getElementById('toggleAggregatorsBtn');
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', toggleAggregators);
         }
 
         checkAuth();
         renderClouds();
         handleOAuthRedirect();
-        addLogoutButton();
-        addMobileLogoutButton();
-        addMobileTrashBin();
     </script>
 </body>
 </html>
