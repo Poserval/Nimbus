@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 
 // Мидлвары
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public'))); // ← ЭТО ГЛАВНОЕ
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Конфигурация OAuth
 const GOOGLE_CLIENT_ID = '944030768816-dknh5820s2knnbnrlde52q4hg2evcl2u.apps.googleusercontent.com';
@@ -79,6 +79,7 @@ app.post('/token', async (req, res) => {
     }
     
     if (service === 'google') {
+        console.log('[Google] Using redirect_uri:', redirect_uri);
         try {
             const response = await axios.post('https://oauth2.googleapis.com/token', null, {
                 params: {
