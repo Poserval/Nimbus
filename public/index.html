@@ -557,10 +557,16 @@
     <script src="js/nimbus-common.js"></script>
     
     <script>
-        let pendingService = null;
+                let pendingService = null;
         let accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
         let draggedCardIndex = null;
         let draggedCardElement = null;
+
+        // ========== ПРОВЕРКА АВТОРИЗАЦИИ ==========
+        const auth = JSON.parse(localStorage.getItem('nimbus_auth') || 'null');
+        if (!auth || auth.expires < Date.now()) {
+            window.location.href = 'reg/index-reg.html';
+        }
 
         function saveAccounts() {
             localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
