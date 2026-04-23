@@ -3,6 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <script>
+    function isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    }
+    if (isMobile()) {
+        window.location.href = 'index-mobile.html';
+    }
+</script>
     <title>Nimbus - Облачный менеджер</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
