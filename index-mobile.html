@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Nimbus - Облачный менеджер</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f5f5f5; min-height: 100vh; }
+
+        /* Мобильный хедер */
+        .mobile-header { background: #1a237e; padding: 12px; position: sticky; top: 0; z-index: 100; }
+        .header-row-1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .logo-area { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 40px; height: 40px; object-fit: contain; }
+        .logo-text { font-size: 18px; font-weight: bold; color: white; }
+        .logout-btn { background: rgba(244, 67, 54, 0.8); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; }
+
+        /* Облака */
+        .clouds-container { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+        .cloud-card { background: white; border-radius: 20px; padding: 16px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s; position: relative; }
+        .cloud-card:active { transform: scale(0.98); }
+        .cloud-card.dragging { opacity: 0.5; }
+        .cloud-card.drag-over { border: 2px solid #1a237e; background: #e8eaf6; }
+        .drag-handle { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 20px; color: #999; cursor: grab; padding: 10px; }
+        .cloud-icon { width: 50px; height: 50px; object-fit: contain; }
+        .cloud-info { flex: 1; }
+        .cloud-name { font-size: 16px; font-weight: bold; color: #1a237e; }
+        .cloud-email { font-size: 11px; color: #666; margin-top: 2px; }
+        .percent-circle { background: white; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); flex-shrink: 0; }
+
+        /* Кнопка добавления облака */
+        .add-cloud-btn { background: #4caf50; color: white; border: none; padding: 12px 16px; border-radius: 30px; font-size: 14px; font-weight: bold; margin: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+        /* Модальное окно */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center; }
+        .modal-content { background: white; border-radius: 20px; width: 90%; max-width: 340px; padding: 20px; text-align: center; }
+        .modal-content h3 { margin-bottom: 12px; color: #1a237e; font-size: 18px; }
+        .modal-content img { width: 60px; height: 60px; margin-bottom: 12px; }
+        .modal-content button { background: #1a237e; color: white; border: none; padding: 8px 18px; border-radius: 25px; margin: 4px; cursor: pointer; font-size: 14px; }
+        .modal-content button.cancel { background: #999; }
+
+        /* Корзина для удаления */
+        .trash-bin { position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px; background: rgba(244, 67, 54, 0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.3s; z-index: 1000; opacity: 0; transform: scale(0.8); pointer-events: none; }
+        .trash-bin.active { opacity: 1; transform: scale(1); pointer-events: auto; }
+        .trash-bin.drag-over { background: #f44336; transform: scale(1.1); }
+
+        .empty-state { text-align: center; padding: 40px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="mobile-header">
+        <div class="header-row-1">
+            <div class="logo-area">
+                <img src="assets/cloud-icon.png" class="logo-icon" alt="Nimbus">
+                <span class="logo-text">NIMBUS</span>
+            </div>
+            <button class="logout-btn" id="logoutBtn">🚪 Выйти</button>
+        </div>
+    </div>
+
+    <div class="clouds-container" id="cloudsContainer"></div>
+    
+    <button class="add-cloud-btn" id="addCloudBtn">+ Добавить облако</button>
+
+    <div id="trashBin" class="trash-bin">🗑️</div>
+
+    <div id="addCloudModal" class="modal">
+        <div class="modal-content">
+            <img id="modalIcon" src="" alt="Service">
+            <h3 id="modalTitle">Добавить облако</h3>
+            <p>Выберите профиль для авторизации</p>
+            <button id="modalAuthBtn">Авторизоваться</button>
+            <button id="modalCloseBtn" class="cancel">Отмена</button>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/nimbus-common.js"></script>
+    
+    <script>
+        // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
+        let pendingService = null;
+        let accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+        let draggedCardIndex = null;
+        let draggedCardElement = null;
+
+        // ========== ОСНОВНЫЕ ФУНКЦИИ ==========
+        function saveAccounts() {
+            localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+            renderClouds();
+        }
+
+        async function updateGoogleStorageInfo(acc) {
+            try {
+                const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota', {
+                    headers: { Authorization: `Bearer ${acc.accessToken}` }
+                });
+                
+                if (response.status === 401 && acc.refreshToken) {
+                    const refreshResponse = await fetch(CONFIG.PROXY_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refresh_token: acc.refreshToken, grant_type: 'refresh_token', service: 'google' })
+                    });
+                    const refreshData = await refreshResponse.json();
+                    if (refreshData.access_token) {
+                        acc.accessToken = refreshData.access_token;
+                        const index = accounts.findIndex(a => a.email === acc.email);
+                        if (index !== -1) accounts[index].accessToken = refreshData.access_token;
+                        localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+                        const retryResponse = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota', {
+                            headers: { Authorization: `Bearer ${refreshData.access_token}` }
+                        });
+                        const retryData = await retryResponse.json();
+                        const usedBytes = parseInt(retryData.storageQuota.usage) || 0;
+                        const usedGB = usedBytes / (1024 * 1024 * 1024);
+                        let limitGB = 15;
+                        const savedLimit = localStorage.getItem(`limit_${acc.email}`);
+                        if (savedLimit) limitGB = parseFloat(savedLimit);
+                        const percent = Math.min(100, (usedGB / limitGB) * 100);
+                        return { percent, usedGB, limitGB };
+                    }
+                } else if (response.ok) {
+                    const data = await response.json();
+                    const usedBytes = parseInt(data.storageQuota.usage) || 0;
+                    const usedGB = usedBytes / (1024 * 1024 * 1024);
+                    let limitGB = 15;
+                    const savedLimit = localStorage.getItem(`limit_${acc.email}`);
+                    if (savedLimit) limitGB = parseFloat(savedLimit);
+                    const percent = Math.min(100, (usedGB / limitGB) * 100);
+                    return { percent, usedGB, limitGB };
+                }
+                return null;
+            } catch (err) {
+                console.error('Error getting Google storage info:', err);
+                return null;
+            }
+        }
+
+        async function updateYandexStorageInfo(acc) {
+            try {
+                const response = await fetch('https://cloud-api.yandex.net/v1/disk/', {
+                    headers: { Authorization: `OAuth ${acc.accessToken}` }
+                });
+                
+                if (response.status === 401 && acc.refreshToken) {
+                    const refreshResponse = await fetch(CONFIG.PROXY_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refresh_token: acc.refreshToken, grant_type: 'refresh_token', service: 'yandex' })
+                    });
+                    const refreshData = await refreshResponse.json();
+                    if (refreshData.access_token) {
+                        acc.accessToken = refreshData.access_token;
+                        const index = accounts.findIndex(a => a.email === acc.email);
+                        if (index !== -1) accounts[index].accessToken = refreshData.access_token;
+                        localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+                        const retryResponse = await fetch('https://cloud-api.yandex.net/v1/disk/', {
+                            headers: { Authorization: `OAuth ${refreshData.access_token}` }
+                        });
+                        const retryData = await retryResponse.json();
+                        const usedBytes = retryData.used_space || 0;
+                        const usedGB = usedBytes / (1024 * 1024 * 1024);
+                        let limitGB = 15;
+                        const savedLimit = localStorage.getItem(`limit_${acc.email}`);
+                        if (savedLimit) limitGB = parseFloat(savedLimit);
+                        const percent = Math.min(100, (usedGB / limitGB) * 100);
+                        return { percent, usedGB, limitGB };
+                    }
+                } else if (response.ok) {
+                    const data = await response.json();
+                    const usedBytes = data.used_space || 0;
+                    const usedGB = usedBytes / (1024 * 1024 * 1024);
+                    let limitGB = 15;
+                    const savedLimit = localStorage.getItem(`limit_${acc.email}`);
+                    if (savedLimit) limitGB = parseFloat(savedLimit);
+                    const percent = Math.min(100, (usedGB / limitGB) * 100);
+                    return { percent, usedGB, limitGB };
+                }
+                return null;
+            } catch (err) {
+                console.error('Error getting Yandex storage info:', err);
+                return null;
+            }
+        }
+
+        async function updateStorageInfo(acc) {
+            if (acc.service === 'google') {
+                return await updateGoogleStorageInfo(acc);
+            } else if (acc.service === 'yandex') {
+                return await updateYandexStorageInfo(acc);
+            }
+            return null;
+        }
+
+        function getServiceIcon(service) {
+            const icons = {
+                google: 'assets/cloud-icon-google.png',
+                yandex: 'assets/cloud-icon-yandex.png'
+            };
+            return icons[service] || 'assets/cloud-icon.png';
+        }
+
+        async function renderClouds() {
+            const container = document.getElementById('cloudsContainer');
+            if (accounts.length === 0) {
+                container.innerHTML = '<div class="empty-state">Нет подключенных облаков.<br>Нажмите "+ Добавить облако"</div>';
+                return;
+            }
+            
+            let html = '';
+            for (let i = 0; i < accounts.length; i++) {
+                const acc = accounts[i];
+                const info = await updateStorageInfo(acc);
+                const percentInt = info ? Math.round(info.percent) : 0;
+                const bgColor = info ? getColorForPercent(info.percent) : '#4caf50';
+                
+                html += `
+                    <div class="cloud-card" data-index="${i}" data-id="${acc.id}" data-token="${acc.accessToken}" data-email="${acc.email}" data-service="${acc.service}" draggable="true">
+                        <div class="drag-handle" draggable="true">⋮⋮</div>
+                        <img src="${getServiceIcon(acc.service)}" class="cloud-icon" alt="${acc.service}">
+                        <div class="cloud-info">
+                            <div class="cloud-name">${escapeHtml(acc.name)}</div>
+                            <div class="cloud-email">${escapeHtml(acc.email)}</div>
+                        </div>
+                        <div class="percent-circle" style="background-color: ${bgColor}; color: white;">${percentInt}%</div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+            
+            document.querySelectorAll('.cloud-card[data-token]').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('drag-handle')) return;
+                    const token = card.dataset.token;
+                    const email = card.dataset.email;
+                    const service = card.dataset.service;
+                    
+                    if (service === 'google') {
+                        window.location.href = `storage.html?token=${token}&email=${encodeURIComponent(email)}`;
+                    } else if (service === 'yandex') {
+                        window.location.href = `storage-yandex.html?token=${token}&email=${encodeURIComponent(email)}`;
+                    }
+                });
+            });
+            
+            initDragAndDrop();
+        }
+
+        function initDragAndDrop() {
+            const cards = document.querySelectorAll('.cloud-card');
+            const trashBin = document.getElementById('trashBin');
+            
+            cards.forEach(card => {
+                card.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', card.dataset.index);
+                    e.dataTransfer.effectAllowed = 'move';
+                    card.classList.add('dragging');
+                    draggedCardIndex = parseInt(card.dataset.index);
+                    draggedCardElement = card;
+                    trashBin.classList.add('active');
+                });
+                
+                card.addEventListener('dragend', (e) => {
+                    card.classList.remove('dragging');
+                    document.querySelectorAll('.cloud-card').forEach(c => c.classList.remove('drag-over'));
+                    trashBin.classList.remove('active');
+                    trashBin.classList.remove('drag-over');
+                    draggedCardIndex = null;
+                    draggedCardElement = null;
+                });
+                
+                card.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    const targetCard = e.target.closest('.cloud-card');
+                    if (targetCard && draggedCardIndex !== null && parseInt(targetCard.dataset.index) !== draggedCardIndex) {
+                        targetCard.classList.add('drag-over');
+                    }
+                });
+                
+                card.addEventListener('dragleave', (e) => {
+                    const targetCard = e.target.closest('.cloud-card');
+                    if (targetCard) targetCard.classList.remove('drag-over');
+                });
+                
+                card.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const targetCard = e.target.closest('.cloud-card');
+                    if (targetCard) targetCard.classList.remove('drag-over');
+                    if (!targetCard || draggedCardIndex === null) return;
+                    
+                    const fromIndex = draggedCardIndex;
+                    const toIndex = parseInt(targetCard.dataset.index);
+                    if (isNaN(fromIndex) || isNaN(toIndex) || fromIndex === toIndex) return;
+                    
+                    const [movedItem] = accounts.splice(fromIndex, 1);
+                    accounts.splice(toIndex, 0, movedItem);
+                    saveAccounts();
+                });
+            });
+            
+            trashBin.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                trashBin.classList.add('drag-over');
+            });
+            
+            trashBin.addEventListener('dragleave', () => {
+                trashBin.classList.remove('drag-over');
+            });
+            
+            trashBin.addEventListener('drop', (e) => {
+                e.preventDefault();
+                trashBin.classList.remove('drag-over');
+                
+                if (draggedCardIndex !== null && draggedCardElement) {
+                    const email = draggedCardElement.dataset.email;
+                    const name = draggedCardElement.querySelector('.cloud-name')?.textContent || email;
+                    
+                    if (confirm(`Удалить облако "${name}"?\nEmail: ${email}\n\nЭто действие нельзя отменить.`)) {
+                        accounts = accounts.filter((_, idx) => idx !== draggedCardIndex);
+                        saveAccounts();
+                        alert(`Облако "${name}" удалено`);
+                    }
+                }
+                draggedCardIndex = null;
+                draggedCardElement = null;
+                trashBin.classList.remove('active');
+            });
+        }
+
+        // ========== OAuth ==========
+        function showAddCloudModal(service) {
+            pendingService = service;
+            const modal = document.getElementById('addCloudModal');
+            const modalIcon = document.getElementById('modalIcon');
+            const modalTitle = document.getElementById('modalTitle');
+            
+            if (service === 'google') {
+                modalIcon.src = 'assets/cloud-icon-google.png';
+                modalTitle.textContent = 'Google Drive';
+            } else if (service === 'yandex') {
+                modalIcon.src = 'assets/cloud-icon-yandex.png';
+                modalTitle.textContent = 'Яндекс Диск';
+            }
+            modal.style.display = 'flex';
+        }
+
+        function hideModal() {
+            document.getElementById('addCloudModal').style.display = 'none';
+            pendingService = null;
+        }
+
+        async function exchangeGoogleCodeForToken(code) {
+            try {
+                const response = await fetch(CONFIG.PROXY_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, service: 'google' })
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.access_token) {
+                    const userInfo = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+                        headers: { Authorization: `Bearer ${data.access_token}` }
+                    });
+                    const user = await userInfo.json();
+                    
+                    const existingAccount = accounts.find(acc => acc.email === user.email && acc.service === 'google');
+                    if (existingAccount) {
+                        alert(`Аккаунт ${user.email} уже подключён.`);
+                        document.getElementById('addCloudModal').style.display = 'none';
+                        return;
+                    }
+                    
+                    localStorage.setItem(`limit_${user.email}`, '15');
+                    
+                    accounts.push({
+                        id: Date.now(),
+                        service: 'google',
+                        name: user.email.split('@')[0],
+                        accessToken: data.access_token,
+                        refreshToken: data.refresh_token || null,
+                        email: user.email
+                    });
+                    saveAccounts();
+                    document.getElementById('addCloudModal').style.display = 'none';
+                } else {
+                    alert('Ошибка: ' + (data.error || 'не удалось получить токен'));
+                }
+            } catch (err) {
+                console.error('Fetch error:', err);
+                alert('Ошибка соединения: ' + err.message);
+            }
+        }
+
+        function startGoogleAuth() {
+            window.location.href = getGoogleAuthUrl();
+        }
+
+        async function exchangeYandexCodeForToken(code) {
+            try {
+                const response = await fetch(CONFIG.PROXY_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, service: 'yandex' })
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.access_token) {
+                    const userInfo = await fetch('https://login.yandex.ru/info', {
+                        headers: { Authorization: `OAuth ${data.access_token}` }
+                    });
+                    const user = await userInfo.json();
+                    const userEmail = user.default_email || `${user.login}@yandex.ru`;
+                    
+                    const existingAccount = accounts.find(acc => acc.email === userEmail && acc.service === 'yandex');
+                    if (existingAccount) {
+                        alert(`Аккаунт ${userEmail} уже подключён.`);
+                        document.getElementById('addCloudModal').style.display = 'none';
+                        return;
+                    }
+                    
+                    localStorage.setItem(`limit_${userEmail}`, '15');
+                    
+                    accounts.push({
+                        id: Date.now(),
+                        service: 'yandex',
+                        name: user.login,
+                        accessToken: data.access_token,
+                        refreshToken: data.refresh_token || null,
+                        email: userEmail
+                    });
+                    saveAccounts();
+                    document.getElementById('addCloudModal').style.display = 'none';
+                } else {
+                    alert('Ошибка: ' + (data.error || 'не удалось получить токен'));
+                }
+            } catch (err) {
+                console.error('Fetch error:', err);
+                alert('Ошибка соединения: ' + err.message);
+            }
+        }
+
+        function startYandexAuth() {
+            window.location.href = getYandexAuthUrl();
+        }
+
+        function handleOAuthRedirect() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const service = urlParams.get('service');
+            
+            if (code) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
+                if (service === 'google') {
+                    exchangeGoogleCodeForToken(code);
+                } else if (service === 'yandex') {
+                    exchangeYandexCodeForToken(code);
+                } else {
+                    exchangeGoogleCodeForToken(code);
+                }
+            }
+        }
+
+        function checkAuth() {
+            const auth = JSON.parse(localStorage.getItem('nimbus_auth') || 'null');
+            if (!auth || auth.expires < Date.now()) {
+                window.location.href = 'reg/index-reg.html';
+            }
+        }
+
+        function logout() {
+            if (confirm('Выйти из аккаунта?')) {
+                localStorage.removeItem('nimbus_auth');
+                window.location.href = 'reg/index-reg.html';
+            }
+        }
+
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
+        document.getElementById('addCloudBtn').onclick = () => {
+            const service = prompt('Выберите облако:\n1 - Google Drive\n2 - Яндекс.Диск');
+            if (service === '1') showAddCloudModal('google');
+            else if (service === '2') showAddCloudModal('yandex');
+            else if (service) alert('Неверный выбор');
+        };
+
+        document.getElementById('modalAuthBtn').onclick = () => {
+            if (pendingService === 'google') startGoogleAuth();
+            else if (pendingService === 'yandex') startYandexAuth();
+            hideModal();
+        };
+
+        document.getElementById('modalCloseBtn').onclick = hideModal;
+        document.getElementById('addCloudModal').onclick = (e) => {
+            if (e.target === document.getElementById('addCloudModal')) hideModal();
+        };
+
+        document.getElementById('logoutBtn').onclick = logout;
+
+        checkAuth();
+        renderClouds();
+        handleOAuthRedirect();
+    </script>
+</body>
+</html>
