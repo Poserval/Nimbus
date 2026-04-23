@@ -8,13 +8,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
         // Редирект на мобильную версию
-        if (window.innerWidth <= 768) {
-            const params = new URLSearchParams(window.location.search);
-            const token = params.get('token');
-            const email = params.get('email');
-            window.location.href = `storage-mobile.html?cloud=google&token=${token}&email=${encodeURIComponent(email)}`;
-        }
-    </script>
+        <script>
+    // Проверка на мобильное устройство по userAgent + ширина
+    function isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    }
+    
+    if (isMobile()) {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const email = params.get('email');
+        const cloud = params.get('cloud') || 'google';
+        window.location.href = `storage-mobile.html?cloud=${cloud}&token=${token}&email=${encodeURIComponent(email || '')}`;
+    }
+</script>
 </head>
 <body class="google-drive">
     <!-- Плавающая иконка -->
