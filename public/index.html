@@ -29,7 +29,55 @@
             position: relative;
             z-index: 1;
             display: flex;
+            flex-direction: column;
             min-height: 100vh;
+        }
+
+        /* Верхняя панель с кнопкой выхода */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(26, 35, 126, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .logout-top-btn {
+            background: rgba(244, 67, 54, 0.9);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        
+        .logout-top-btn:hover {
+            background: #f44336;
+        }
+        
+        .logo-small {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo-small img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+        
+        .logo-small span {
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
         }
 
         .sidebar {
@@ -39,9 +87,9 @@
             display: flex;
             flex-direction: column;
             position: fixed;
-            top: 0;
+            top: 70px;
             left: 0;
-            height: 100vh;
+            height: calc(100vh - 70px);
             overflow-y: auto;
             z-index: 2;
         }
@@ -115,21 +163,6 @@
             color: #1a237e;
             position: relative;
             z-index: 2;
-        }
-
-        .app-description {
-            text-align: center;
-            margin: 15px 0 10px 0;
-            padding: 10px;
-            background: rgba(255,255,255,0.5);
-            border-radius: 16px;
-            backdrop-filter: blur(4px);
-        }
-        
-        .app-description p {
-            font-size: 13px;
-            color: #1a237e;
-            line-height: 1.4;
         }
 
         .cloud-header {
@@ -434,22 +467,43 @@
             background: #0d1642;
         }
         
-        .footer-links {
+        /* Нижний колонтитул (под всеми элементами) */
+        .footer {
+            margin-top: 60px;
+            padding: 30px 20px 40px;
+            border-top: 1px solid rgba(26, 35, 126, 0.2);
             text-align: center;
-            padding: 20px;
-            margin-top: 30px;
-            border-top: 1px solid rgba(26,35,126,0.2);
+            background: transparent;
+        }
+        
+        .footer-description {
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
             font-size: 12px;
         }
         
         .footer-links a {
             color: #1a237e;
             text-decoration: none;
-            margin: 0 10px;
         }
         
         .footer-links a:hover {
             text-decoration: underline;
+        }
+        
+        .footer-email {
+            margin-top: 10px;
+            font-size: 11px;
+            color: #666;
         }
         
         button, .service-card, .placeholder-card, .cloud-card, .drag-handle,
@@ -476,13 +530,14 @@
             pointer-events: none;
         }
 
-        /* Мобильные стили (активируются через класс) */
+        /* Мобильные стили */
         @media (max-width: 768px) {
             .sidebar {
                 width: 100%;
                 position: relative;
-                padding: 15px;
+                top: 0;
                 height: auto;
+                padding: 15px;
             }
             
             .main-content {
@@ -505,7 +560,6 @@
                 margin: 0 auto;
             }
 
-            /* Мобильный аккордеон для иконки "Облачные хранилища" */
             .mobile-accordion .services-grid,
             .mobile-accordion .placeholder-grid {
                 display: none;
@@ -527,11 +581,31 @@
             .mobile-accordion .section-title:active {
                 background: rgba(26,35,126,0.2);
             }
+            
+            .top-bar {
+                position: relative;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .top-bar {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
     <div class="bg-overlay"></div>
+    
+    <!-- Верхняя панель с кнопкой выхода (только для мобильных) -->
+    <div class="top-bar">
+        <div class="logo-small">
+            <img src="assets/cloud-icon.png" alt="Nimbus">
+            <span>NIMBUS</span>
+        </div>
+        <button class="logout-top-btn" id="logoutTopBtn">🚪 Выйти</button>
+    </div>
+    
     <div class="app-container">
         <div class="sidebar">
             <div class="logo-area" id="logoArea">
@@ -539,10 +613,6 @@
                 <div class="rain-container" id="rainContainer"></div>
                 <h1>NIMBUS</h1>
                 <p>Cloud Manager</p>
-            </div>
-
-            <div class="app-description">
-                <p>Объединяет Google Drive и Яндекс.Диск в одном интерфейсе.<br>Управляйте файлами из разных облаков без переключения.</p>
             </div>
 
             <div class="cloud-header">
@@ -583,9 +653,19 @@
                 </div>
             </div>
             
-            <div class="footer-links">
-                <a href="/privacy.html" target="_blank">Политика конфиденциальности</a>
-                <button id="logoutBtn" style="background: #f44336; color: white; border: none; padding: 8px 16px; border-radius: 25px; cursor: pointer; margin-top: 20px;">🚪 Выйти</button>
+            <!-- Нижний колонтитул (под всеми элементами, виден только при скролле) -->
+            <div class="footer">
+                <div class="footer-description">
+                    Объединяет Google Drive и Яндекс.Диск в одном интерфейсе.<br>
+                    Управляйте файлами из разных облаков без переключения.
+                </div>
+                <div class="footer-links">
+                    <a href="/privacy.html" target="_blank">Политика конфиденциальности</a>
+                    <a href="mailto:poserval@gmail.com">Обратная связь</a>
+                </div>
+                <div class="footer-email">
+                    📧 poserval@gmail.com
+                </div>
             </div>
         </div>
 
@@ -618,19 +698,13 @@
             const cloudsTitle = document.getElementById('cloudsSectionTitle');
             const servicesGrid = document.getElementById('servicesGrid');
             const placeholderGrid = document.getElementById('placeholderGrid');
-            const wrapper = document.getElementById('servicesGridWrapper');
             
             if (isMobile) {
-                // Добавляем класс для мобильных стилей
                 document.body.classList.add('mobile-accordion');
-                
-                // Скрываем блоки по умолчанию
                 if (servicesGrid) servicesGrid.classList.remove('show');
                 if (placeholderGrid) placeholderGrid.classList.remove('show');
                 
-                // Обработчик нажатия на заголовок
                 if (cloudsTitle) {
-                    // Удаляем старый обработчик, если был
                     const newTitle = cloudsTitle.cloneNode(true);
                     cloudsTitle.parentNode.replaceChild(newTitle, cloudsTitle);
                     
@@ -639,9 +713,6 @@
                         if (servicesGrid) servicesGrid.classList.toggle('show');
                         if (placeholderGrid) placeholderGrid.classList.toggle('show');
                     });
-                    
-                    // Заменяем глобальную переменную
-                    window.cloudsTitleElement = newTitle;
                 }
             } else {
                 document.body.classList.remove('mobile-accordion');
@@ -1120,15 +1191,19 @@
             }
         };
 
+        // Обработчики кнопок выхода
         const logoutBtn = document.getElementById('logoutBtn');
+        const logoutTopBtn = document.getElementById('logoutTopBtn');
+        
         if (logoutBtn) {
             logoutBtn.onclick = logout;
         }
+        if (logoutTopBtn) {
+            logoutTopBtn.onclick = logout;
+        }
 
-        // Инициализация мобильного аккордеона
         initMobileAccordion();
         
-        // При изменении размера окна переинициализируем
         window.addEventListener('resize', () => {
             initMobileAccordion();
         });
