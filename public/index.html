@@ -167,7 +167,7 @@
 
         .services-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(4, 1fr);
             gap: 12px;
             margin-bottom: 0px;
             margin-top: 10px;
@@ -180,7 +180,7 @@
             cursor: pointer;
             transition: all 0.2s;
             padding: 10px 6px;
-            border-radius: 14px;
+            border-radius: 16px;
             background: rgba(255,255,255,0.7);
             backdrop-filter: blur(4px);
         }
@@ -206,8 +206,9 @@
 
         .placeholder-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(4, 1fr);
             gap: 12px;
+            margin-top: 12px;
         }
 
         .placeholder-card {
@@ -215,7 +216,7 @@
             flex-direction: column;
             align-items: center;
             padding: 10px 6px;
-            border-radius: 14px;
+            border-radius: 16px;
             background: rgba(200,200,200,0.5);
             backdrop-filter: blur(4px);
             border: 1px dashed rgba(26,35,126,0.3);
@@ -251,14 +252,16 @@
         }
 
         .clouds-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 180px));
-            gap: 35px;
-            justify-content: flex-start;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 40px;
         }
 
         .cloud-card {
-            width: 180px;
+            width: calc(25% - 15px);
+            min-width: 180px;
+            flex: 0 0 auto;
             text-align: center;
             cursor: grab;
             transition: all 0.3s;
@@ -522,18 +525,16 @@
             }
             
             .clouds-grid {
-                grid-template-columns: 1fr;
                 gap: 15px;
+            }
+            
+            .cloud-card {
+                width: calc(50% - 7.5px);
+                min-width: auto;
             }
             
             .app-container {
                 flex-direction: column;
-            }
-            
-            .cloud-card {
-                width: 100%;
-                max-width: 300px;
-                margin: 0 auto;
             }
 
             .mobile-accordion .services-grid,
@@ -566,6 +567,12 @@
                 left: 15px;
             }
         }
+        
+        @media (max-width: 480px) {
+            .cloud-card {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -587,6 +594,27 @@
                 <img src="assets/cloud-icon1.png" alt="Cloud" class="cloud-header-icon">
             </div>
 
+            <!-- Агрегаторы (размещены ПЕРВЫМИ) -->
+            <div class="placeholder-grid" id="placeholderGrid">
+                <div class="placeholder-card" data-placeholder="1">
+                    <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
+                    <span class="placeholder-name">Агрегатор 1</span>
+                </div>
+                <div class="placeholder-card" data-placeholder="2">
+                    <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
+                    <span class="placeholder-name">Агрегатор 2</span>
+                </div>
+                <div class="placeholder-card" data-placeholder="3">
+                    <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
+                    <span class="placeholder-name">Агрегатор 3</span>
+                </div>
+                <div class="placeholder-card" data-placeholder="4">
+                    <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
+                    <span class="placeholder-name">Агрегатор 4</span>
+                </div>
+            </div>
+
+            <!-- Облачные хранилища (размещены ПОД агрегаторами) -->
             <div class="section-title" id="cloudsSectionTitle">☁️ Облачные хранилища</div>
             
             <div id="servicesGridWrapper">
@@ -600,28 +628,9 @@
                         <span class="service-name">Яндекс Диск</span>
                     </div>
                 </div>
-
-                <div class="placeholder-grid" id="placeholderGrid">
-                    <div class="placeholder-card" data-placeholder="1">
-                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
-                        <span class="placeholder-name">Агрегатор 1</span>
-                    </div>
-                    <div class="placeholder-card" data-placeholder="2">
-                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
-                        <span class="placeholder-name">Агрегатор 2</span>
-                    </div>
-                    <div class="placeholder-card" data-placeholder="3">
-                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
-                        <span class="placeholder-name">Агрегатор 3</span>
-                    </div>
-                    <div class="placeholder-card" data-placeholder="4">
-                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
-                        <span class="placeholder-name">Агрегатор 4</span>
-                    </div>
-                </div>
             </div>
             
-            <!-- Нижний колонтитул (под всеми элементами, виден только при скролле) -->
+            <!-- Информация всегда внизу -->
             <div class="footer">
                 <div class="footer-description">
                     Объединяет Google Drive и Яндекс.Диск в одном интерфейсе.<br>
@@ -665,12 +674,10 @@
             const isMobile = window.innerWidth <= 768;
             const cloudsTitle = document.getElementById('cloudsSectionTitle');
             const servicesGrid = document.getElementById('servicesGrid');
-            const placeholderGrid = document.getElementById('placeholderGrid');
             
             if (isMobile) {
                 document.body.classList.add('mobile-accordion');
                 if (servicesGrid) servicesGrid.classList.remove('show');
-                if (placeholderGrid) placeholderGrid.classList.remove('show');
                 
                 if (cloudsTitle) {
                     const newTitle = cloudsTitle.cloneNode(true);
@@ -679,13 +686,11 @@
                     newTitle.addEventListener('click', (e) => {
                         e.stopPropagation();
                         if (servicesGrid) servicesGrid.classList.toggle('show');
-                        if (placeholderGrid) placeholderGrid.classList.toggle('show');
                     });
                 }
             } else {
                 document.body.classList.remove('mobile-accordion');
                 if (servicesGrid) servicesGrid.classList.add('show');
-                if (placeholderGrid) placeholderGrid.classList.add('show');
             }
         }
 
@@ -1012,7 +1017,6 @@
                     
                     localStorage.setItem(`limit_${user.email}`, '15');
                     
-                    alert(`Аккаунт ${user.email} успешно добавлен!`);
                     accounts.push({
                         id: Date.now(),
                         service: 'google',
@@ -1061,7 +1065,6 @@
                     
                     localStorage.setItem(`limit_${userEmail}`, '15');
                     
-                    alert(`Аккаунт ${userEmail} успешно добавлен!`);
                     accounts.push({
                         id: Date.now(),
                         service: 'yandex',
