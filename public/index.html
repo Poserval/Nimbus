@@ -46,7 +46,6 @@
             z-index: 2;
         }
 
-        /* Кнопка выхода в левом верхнем углу (круглая, только иконка двери) */
         .logout-circle-btn {
             position: fixed;
             top: 20px;
@@ -201,44 +200,6 @@
             font-size: 11px;
             font-weight: 500;
             color: #1a237e;
-            text-align: center;
-        }
-
-        .placeholder-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .placeholder-card {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 10px 6px;
-            border-radius: 14px;
-            background: rgba(200,200,200,0.5);
-            backdrop-filter: blur(4px);
-            border: 1px dashed rgba(26,35,126,0.3);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .placeholder-card:hover {
-            background: rgba(200,200,200,0.8);
-            transform: translateY(-2px);
-        }
-
-        .placeholder-icon {
-            width: 50px;
-            height: 50px;
-            object-fit: contain;
-            margin-bottom: 6px;
-        }
-
-        .placeholder-name {
-            font-size: 10px;
-            font-weight: 500;
-            color: #666;
             text-align: center;
         }
 
@@ -483,7 +444,7 @@
             color: #666;
         }
         
-        button, .service-card, .placeholder-card, .cloud-card, .drag-handle,
+        button, .service-card, .cloud-card, .drag-handle,
         .modal-content button, .back-btn, .action-btn, .limit-arrow-btn,
         .share-cloud-item, .folder-item, .file-click-area, .zip-file-item,
         .extract-file-btn, #extractAllBtn, #closeZipViewerBtn, #viewerPrevBtn,
@@ -536,13 +497,11 @@
                 margin: 0 auto;
             }
 
-            .mobile-accordion .services-grid,
-            .mobile-accordion .placeholder-grid {
+            .mobile-accordion .services-grid {
                 display: none;
             }
             
-            .mobile-accordion .services-grid.show,
-            .mobile-accordion .placeholder-grid.show {
+            .mobile-accordion .services-grid.show {
                 display: grid;
             }
             
@@ -571,7 +530,6 @@
 <body>
     <div class="bg-overlay"></div>
     
-    <!-- Кнопка выхода в левом верхнем углу (круглая, только иконка двери) -->
     <button class="logout-circle-btn" id="logoutCircleBtn" title="Выйти из аккаунта">🚪</button>
     
     <div class="app-container">
@@ -589,39 +547,48 @@
 
             <div class="section-title" id="cloudsSectionTitle">☁️ Облачные хранилища</div>
             
-            <div id="servicesGridWrapper">
-                <div class="services-grid" id="servicesGrid">
-                    <div class="service-card" data-service="google">
-                        <img src="assets/cloud-icon-google.png" class="service-icon" alt="Google">
-                        <span class="service-name">Google Drive</span>
-                    </div>
-                    <div class="service-card" data-service="yandex">
-                        <img src="assets/cloud-icon-yandex.png" class="service-icon" alt="Yandex">
-                        <span class="service-name">Яндекс Диск</span>
-                    </div>
+            <div class="services-grid" id="servicesGrid">
+                <!-- Рабочие облака (реализованы) -->
+                <div class="service-card" data-service="google">
+                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Google">
+                    <span class="service-name">Google Drive</span>
                 </div>
-
-                <div class="placeholder-grid" id="placeholderGrid">
-                    <div class="placeholder-card" data-placeholder="1">
-                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
-                        <span class="placeholder-name">Агрегатор 1</span>
-                    </div>
-                    <div class="placeholder-card" data-placeholder="2">
-                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
-                        <span class="placeholder-name">Агрегатор 2</span>
-                    </div>
-                    <div class="placeholder-card" data-placeholder="3">
-                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
-                        <span class="placeholder-name">Агрегатор 3</span>
-                    </div>
-                    <div class="placeholder-card" data-placeholder="4">
-                        <img src="assets/cloud-icon1.png" class="placeholder-icon" alt="Aggregator">
-                        <span class="placeholder-name">Агрегатор 4</span>
-                    </div>
+                <div class="service-card" data-service="yandex">
+                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Yandex">
+                    <span class="service-name">Яндекс.Диск</span>
+                </div>
+                
+                <!-- Планируемые облака (будут добавлены позже) -->
+                <div class="service-card" data-service="dropbox" style="opacity: 0.8;">
+                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Dropbox">
+                    <span class="service-name">Dropbox</span>
+                </div>
+                <div class="service-card" data-service="onedrive" style="opacity: 0.8;">
+                    <img src="assets/cloud-icon1.png" class="service-icon" alt="OneDrive">
+                    <span class="service-name">OneDrive</span>
+                </div>
+                <div class="service-card" data-service="pcloud" style="opacity: 0.8;">
+                    <img src="assets/cloud-icon1.png" class="service-icon" alt="pCloud">
+                    <span class="service-name">pCloud</span>
+                </div>
+                <div class="service-card" data-service="storj" style="opacity: 0.8;">
+                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Storj">
+                    <span class="service-name">Storj</span>
+                </div>
+                <div class="service-card" data-service="rackspace" style="opacity: 0.8;">
+                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Rackspace">
+                    <span class="service-name">Rackspace</span>
+                </div>
+                <div class="service-card" data-service="ncloud" style="opacity: 0.8;">
+                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Ncloud">
+                    <span class="service-name">Ncloud</span>
+                </div>
+                <div class="service-card" data-service="appwrite" style="opacity: 0.8;">
+                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Appwrite">
+                    <span class="service-name">Appwrite</span>
                 </div>
             </div>
             
-            <!-- Нижний колонтитул (под всеми элементами, виден только при скролле) -->
             <div class="footer">
                 <div class="footer-description">
                     Объединяет Google Drive и Яндекс.Диск в одном интерфейсе.<br>
@@ -665,12 +632,10 @@
             const isMobile = window.innerWidth <= 768;
             const cloudsTitle = document.getElementById('cloudsSectionTitle');
             const servicesGrid = document.getElementById('servicesGrid');
-            const placeholderGrid = document.getElementById('placeholderGrid');
             
             if (isMobile) {
                 document.body.classList.add('mobile-accordion');
                 if (servicesGrid) servicesGrid.classList.remove('show');
-                if (placeholderGrid) placeholderGrid.classList.remove('show');
                 
                 if (cloudsTitle) {
                     const newTitle = cloudsTitle.cloneNode(true);
@@ -679,13 +644,11 @@
                     newTitle.addEventListener('click', (e) => {
                         e.stopPropagation();
                         if (servicesGrid) servicesGrid.classList.toggle('show');
-                        if (placeholderGrid) placeholderGrid.classList.toggle('show');
                     });
                 }
             } else {
                 document.body.classList.remove('mobile-accordion');
                 if (servicesGrid) servicesGrid.classList.add('show');
-                if (placeholderGrid) placeholderGrid.classList.add('show');
             }
         }
 
@@ -820,7 +783,7 @@
                 html += `
                     <div class="cloud-card" data-index="${i}" data-id="${acc.id}" data-token="${acc.accessToken}" data-email="${acc.email}" data-service="${acc.service}" draggable="true">
                         <div class="drag-handle" draggable="true">⋮⋮</div>
-                        <img src="assets/cloud-icon-${acc.service}.png" alt="${acc.service}">
+                        <img src="assets/cloud-icon1.png" alt="${acc.service}">
                         <div class="percent-circle" style="background-color: ${bgColor}; color: white;">${percentInt}%</div>
                         <div class="cloud-card-name">${escapeHtml(acc.name)}</div>
                         <div class="cloud-card-email">${escapeHtml(acc.email)}</div>
@@ -841,6 +804,8 @@
                         window.location.href = `storage.html?token=${token}&email=${encodeURIComponent(email)}`;
                     } else if (service === 'yandex') {
                         window.location.href = `storage-yandex.html?token=${token}&email=${encodeURIComponent(email)}`;
+                    } else {
+                        alert(`Облако "${acc.name}" будет добавлено в следующей версии`);
                     }
                 });
             });
@@ -973,11 +938,20 @@
             const modalTitle = document.getElementById('modalTitle');
             
             if (service === 'google') {
-                modalIcon.src = 'assets/cloud-icon-google.png';
+                modalIcon.src = 'assets/cloud-icon1.png';
                 modalTitle.textContent = 'Google Drive';
             } else if (service === 'yandex') {
-                modalIcon.src = 'assets/cloud-icon-yandex.png';
+                modalIcon.src = 'assets/cloud-icon1.png';
                 modalTitle.textContent = 'Яндекс Диск';
+            } else if (service === 'dropbox') {
+                modalIcon.src = 'assets/cloud-icon1.png';
+                modalTitle.textContent = 'Dropbox';
+            } else if (service === 'onedrive') {
+                modalIcon.src = 'assets/cloud-icon1.png';
+                modalTitle.textContent = 'OneDrive';
+            } else {
+                modalIcon.src = 'assets/cloud-icon1.png';
+                modalTitle.textContent = 'Облачное хранилище';
             }
             
             modal.style.display = 'flex';
@@ -1012,7 +986,6 @@
                     
                     localStorage.setItem(`limit_${user.email}`, '15');
                     
-                    alert(`Аккаунт ${user.email} успешно добавлен!`);
                     accounts.push({
                         id: Date.now(),
                         service: 'google',
@@ -1061,7 +1034,6 @@
                     
                     localStorage.setItem(`limit_${userEmail}`, '15');
                     
-                    alert(`Аккаунт ${userEmail} успешно добавлен!`);
                     accounts.push({
                         id: Date.now(),
                         service: 'yandex',
@@ -1132,14 +1104,9 @@
                     showAddCloudModal('google');
                 } else if (service === 'yandex') {
                     showAddCloudModal('yandex');
+                } else {
+                    alert(`Облако "${card.querySelector('.service-name')?.textContent}" будет добавлено в следующей версии`);
                 }
-            });
-        });
-
-        document.querySelectorAll('.placeholder-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const num = card.dataset.placeholder;
-                alert(`Агрегатор ${num} будет добавлен в следующей версии`);
             });
         });
 
@@ -1148,8 +1115,10 @@
                 startGoogleAuth();
             } else if (pendingService === 'yandex') {
                 startYandexAuth();
+            } else {
+                alert(`Авторизация для ${pendingService} будет добавлена в следующей версии`);
+                hideModal();
             }
-            hideModal();
         };
 
         document.getElementById('modalCloseBtn').onclick = hideModal;
@@ -1159,7 +1128,6 @@
             }
         };
 
-        // Обработчик кнопки выхода (круглая, левый верхний угол)
         const logoutCircleBtn = document.getElementById('logoutCircleBtn');
         if (logoutCircleBtn) {
             logoutCircleBtn.onclick = logout;
