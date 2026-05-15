@@ -153,37 +153,58 @@
             object-fit: contain;
         }
 
-        .section-title {
-            font-size: 15px;
+        /* Стили для кнопок-аккордеонов */
+        .accordion-btn {
+            width: 100%;
+            background: rgba(26, 35, 126, 0.8);
+            backdrop-filter: blur(4px);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 15px 0 10px 0;
+            border-radius: 30px;
+            font-size: 14px;
             font-weight: 600;
-            color: #1a237e;
-            text-align: center;
-            margin-bottom: 0px;
-            margin-top: -10px;
             cursor: pointer;
-            user-select: none;
+            text-align: center;
+            transition: all 0.2s;
+            letter-spacing: 0.5px;
         }
 
-        /* Сетка 4 колонки для облачных хранилищ */
+        .accordion-btn:hover {
+            background: rgba(26, 35, 126, 1);
+            transform: translateY(-2px);
+        }
+
+        /* Горизонтальный скролл для агрегаторов */
+        .aggregators-wrapper {
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            margin: 0 -20px;
+            padding: 0 20px 10px 20px;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+
         .services-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            display: inline-flex;
             gap: 12px;
-            margin-bottom: 0px;
-            margin-top: 10px;
+            white-space: normal;
         }
 
         .service-card {
-            display: flex;
+            display: inline-flex;
             flex-direction: column;
             align-items: center;
             cursor: pointer;
             transition: all 0.2s;
-            padding: 10px 6px;
+            padding: 10px 12px;
             border-radius: 16px;
             background: rgba(255,255,255,0.7);
             backdrop-filter: blur(4px);
             border: 1px solid rgba(26,35,126,0.1);
+            min-width: 85px;
         }
 
         .service-card:hover {
@@ -200,33 +221,26 @@
         }
 
         .service-name {
-            font-size: 11px;
-            font-weight: 500;
+            font-size: 10px;
+            font-weight: 600;
             color: #1a237e;
             text-align: center;
             line-height: 1.3;
         }
 
-        .main-content {
-            flex: 1;
-            margin-left: 280px;
-            padding: 30px 30px 30px 20px;
-            min-height: 100vh;
-            overflow-y: auto;
-        }
-
-        .clouds-grid {
+        /* Сетка для хранилищ (4 колонки) */
+        .storages-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            justify-content: flex-start;
+            gap: 16px;
+            margin: 5px 0;
         }
 
         .cloud-card {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(4px);
             border-radius: 20px;
-            padding: 16px 12px;
+            padding: 14px 8px;
             text-align: center;
             cursor: grab;
             transition: all 0.3s;
@@ -234,6 +248,8 @@
             user-select: none;
             position: relative;
             border: 1px solid rgba(255,255,255,0.3);
+            display: flex;
+            flex-direction: column;
         }
 
         .cloud-card:active {
@@ -259,23 +275,24 @@
         }
 
         .cloud-card img {
-            width: 70px;
-            height: 70px;
+            width: 65px;
+            height: 65px;
             object-fit: contain;
-            margin-bottom: 8px;
+            margin: 0 auto 8px auto;
             pointer-events: none;
         }
 
         .cloud-card-name {
-            font-size: 14px;
-            font-weight: 600;
+            font-size: 13px;
+            font-weight: 700;
             color: #1a237e;
-            margin-top: 8px;
+            margin-top: 6px;
             pointer-events: none;
+            line-height: 1.3;
         }
 
         .cloud-card-email {
-            font-size: 10px;
+            font-size: 9px;
             color: #666;
             margin-top: 4px;
             word-break: break-all;
@@ -283,11 +300,11 @@
         }
 
         .percent-circle {
-            margin: 8px auto 0 auto;
+            margin: 10px auto 0 auto;
             background: white;
             border-radius: 30px;
-            width: 44px;
-            height: 44px;
+            width: 42px;
+            height: 42px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -295,16 +312,14 @@
             font-size: 13px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.15);
             border: 2px solid white;
-            position: relative;
-            z-index: 2;
             pointer-events: none;
         }
 
         .drag-handle {
             position: absolute;
             top: 8px;
-            right: 12px;
-            font-size: 18px;
+            right: 10px;
+            font-size: 16px;
             color: #999;
             cursor: grab;
             opacity: 0;
@@ -319,6 +334,14 @@
 
         .cloud-card:active .drag-handle {
             cursor: grabbing;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 30px 30px 30px 20px;
+            min-height: 100vh;
+            overflow-y: auto;
         }
 
         .trash-bin {
@@ -411,17 +434,17 @@
         }
         
         .footer {
-            margin-top: 60px;
-            padding: 30px 20px 40px;
-            border-top: 1px solid rgba(26, 35, 126, 0.2);
+            margin-top: 40px;
+            padding: 25px 15px 30px;
+            border-top: 1px solid rgba(26, 35, 126, 0.25);
             text-align: center;
             background: transparent;
         }
         
         .footer-description {
-            font-size: 12px;
+            font-size: 11px;
             color: #555;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             line-height: 1.5;
         }
         
@@ -430,7 +453,7 @@
             justify-content: center;
             gap: 20px;
             flex-wrap: wrap;
-            font-size: 12px;
+            font-size: 11px;
         }
         
         .footer-links a {
@@ -443,18 +466,29 @@
         }
         
         .footer-email {
-            margin-top: 10px;
-            font-size: 11px;
+            margin-top: 8px;
+            font-size: 10px;
             color: #666;
         }
         
+        /* Анимации для аккордеона */
+        .aggregators-section,
+        .storages-section {
+            transition: all 0.3s ease;
+        }
+        
+        .aggregators-section.hide,
+        .storages-section.hide {
+            display: none;
+        }
+
+        .mobile-accordion .aggregators-section.hide,
+        .mobile-accordion .storages-section.hide {
+            display: none;
+        }
+
         button, .service-card, .cloud-card, .drag-handle,
-        .modal-content button, .back-btn, .action-btn, .limit-arrow-btn,
-        .share-cloud-item, .folder-item, .file-click-area, .zip-file-item,
-        .extract-file-btn, #extractAllBtn, #closeZipViewerBtn, #viewerPrevBtn,
-        #viewerNextBtn, #viewerCloseBtn, #viewerDownloadBtn, .cancel-progress-btn,
-        #playPauseBtn, #playerPrevBtn, #playerNextBtn, #fullscreenBtn,
-        #downloadMediaBtn, #playerCloseBtn {
+        .modal-content button, .accordion-btn {
             cursor: pointer;
         }
         
@@ -486,17 +520,13 @@
                 padding: 15px;
             }
             
-            .clouds-grid {
+            .storages-grid {
                 grid-template-columns: repeat(2, 1fr);
-                gap: 15px;
-            }
-            
-            .app-container {
-                flex-direction: column;
+                gap: 12px;
             }
             
             .cloud-card {
-                padding: 12px 8px;
+                padding: 10px 6px;
             }
             
             .cloud-card img {
@@ -510,32 +540,30 @@
                 font-size: 11px;
             }
 
-            .mobile-accordion .services-grid {
-                display: none;
-            }
-            
-            .mobile-accordion .services-grid.show {
-                display: grid;
-            }
-            
-            .mobile-accordion .section-title {
-                background: rgba(26,35,126,0.1);
-                padding: 12px;
-                border-radius: 30px;
-                margin-bottom: 10px;
-                transition: background 0.2s;
-            }
-            
-            .mobile-accordion .section-title:active {
-                background: rgba(26,35,126,0.2);
-            }
-            
             .logout-circle-btn {
                 width: 40px;
                 height: 40px;
                 font-size: 20px;
                 top: 15px;
                 left: 15px;
+            }
+
+            .services-grid {
+                gap: 8px;
+            }
+
+            .service-card {
+                min-width: 75px;
+                padding: 8px 6px;
+            }
+
+            .service-icon {
+                width: 40px;
+                height: 40px;
+            }
+
+            .service-name {
+                font-size: 9px;
             }
         }
     </style>
@@ -558,50 +586,62 @@
                 <img src="assets/cloud-icon1.png" alt="Cloud" class="cloud-header-icon">
             </div>
 
-            <div class="section-title" id="cloudsSectionTitle">☁️ Облачные хранилища</div>
+            <!-- Кнопка Облачные агрегаторы -->
+            <button class="accordion-btn" id="toggleAggregatorsBtn">☁️ Облачные агрегаторы</button>
             
-            <div class="services-grid" id="servicesGrid">
-                <!-- Рабочие облака (реализованы) -->
-                <div class="service-card" data-service="google">
-                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Google">
-                    <span class="service-name">Google Drive</span>
-                </div>
-                <div class="service-card" data-service="yandex">
-                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Yandex">
-                    <span class="service-name">Яндекс.Диск</span>
-                </div>
-                
-                <!-- Планируемые облака (будут добавлены позже) -->
-                <div class="service-card" data-service="dropbox">
-                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Dropbox">
-                    <span class="service-name">Dropbox</span>
-                </div>
-                <div class="service-card" data-service="onedrive">
-                    <img src="assets/cloud-icon1.png" class="service-icon" alt="OneDrive">
-                    <span class="service-name">OneDrive</span>
-                </div>
-                <div class="service-card" data-service="pcloud">
-                    <img src="assets/cloud-icon1.png" class="service-icon" alt="pCloud">
-                    <span class="service-name">pCloud</span>
-                </div>
-                <div class="service-card" data-service="storj">
-                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Storj">
-                    <span class="service-name">Storj</span>
-                </div>
-                <div class="service-card" data-service="rackspace">
-                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Rackspace">
-                    <span class="service-name">Rackspace</span>
-                </div>
-                <div class="service-card" data-service="ncloud">
-                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Ncloud">
-                    <span class="service-name">Ncloud</span>
-                </div>
-                <div class="service-card" data-service="appwrite">
-                    <img src="assets/cloud-icon1.png" class="service-icon" alt="Appwrite">
-                    <span class="service-name">Appwrite</span>
+            <!-- Секция агрегаторов -->
+            <div class="aggregators-section" id="aggregatorsSection">
+                <div class="aggregators-wrapper">
+                    <div class="services-grid" id="servicesGrid">
+                        <div class="service-card" data-service="google">
+                            <img src="assets/cloud-icon1.png" class="service-icon" alt="Google">
+                            <span class="service-name">Google Drive</span>
+                        </div>
+                        <div class="service-card" data-service="yandex">
+                            <img src="assets/cloud-icon1.png" class="service-icon" alt="Yandex">
+                            <span class="service-name">Яндекс.Диск</span>
+                        </div>
+                        <div class="service-card" data-service="dropbox">
+                            <img src="assets/cloud-icon1.png" class="service-icon" alt="Dropbox">
+                            <span class="service-name">Dropbox</span>
+                        </div>
+                        <div class="service-card" data-service="onedrive">
+                            <img src="assets/cloud-icon1.png" class="service-icon" alt="OneDrive">
+                            <span class="service-name">OneDrive</span>
+                        </div>
+                        <div class="service-card" data-service="pcloud">
+                            <img src="assets/cloud-icon1.png" class="service-icon" alt="pCloud">
+                            <span class="service-name">pCloud</span>
+                        </div>
+                        <div class="service-card" data-service="storj">
+                            <img src="assets/cloud-icon1.png" class="service-icon" alt="Storj">
+                            <span class="service-name">Storj</span>
+                        </div>
+                        <div class="service-card" data-service="rackspace">
+                            <img src="assets/cloud-icon1.png" class="service-icon" alt="Rackspace">
+                            <span class="service-name">Rackspace</span>
+                        </div>
+                        <div class="service-card" data-service="ncloud">
+                            <img src="assets/cloud-icon1.png" class="service-icon" alt="Ncloud">
+                            <span class="service-name">Ncloud</span>
+                        </div>
+                        <div class="service-card" data-service="appwrite">
+                            <img src="assets/cloud-icon1.png" class="service-icon" alt="Appwrite">
+                            <span class="service-name">Appwrite</span>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <!-- Кнопка Облачные хранилища -->
+            <button class="accordion-btn" id="toggleStoragesBtn">☁️ Облачные хранилища</button>
             
+            <!-- Секция хранилищ (подключенные облака) -->
+            <div class="storages-section" id="storagesSection">
+                <div id="cloudsGrid" class="storages-grid"></div>
+            </div>
+            
+            <!-- Нижний колонтитул -->
             <div class="footer">
                 <div class="footer-description">
                     Объединяет Google Drive и Яндекс.Диск в одном интерфейсе.<br>
@@ -618,7 +658,7 @@
         </div>
 
         <div class="main-content">
-            <div id="cloudsGrid" class="clouds-grid"></div>
+            <!-- Основаня область пока пустая, можно использовать для статистики -->
         </div>
     </div>
 
@@ -640,28 +680,56 @@
     <script src="js/nimbus-common.js"></script>
     
     <script>
-        // ========== МОБИЛЬНЫЙ АККОРДЕОН ==========
-        function initMobileAccordion() {
-            const isMobile = window.innerWidth <= 768;
-            const cloudsTitle = document.getElementById('cloudsSectionTitle');
-            const servicesGrid = document.getElementById('servicesGrid');
+        // ========== АККОРДЕОНЫ ==========
+        let aggregatorsVisible = true;
+        let storagesVisible = true;
+
+        function initAccordions() {
+            const aggregatorsSection = document.getElementById('aggregatorsSection');
+            const storagesSection = document.getElementById('storagesSection');
+            const toggleAggregatorsBtn = document.getElementById('toggleAggregatorsBtn');
+            const toggleStoragesBtn = document.getElementById('toggleStoragesBtn');
             
-            if (isMobile) {
-                document.body.classList.add('mobile-accordion');
-                if (servicesGrid) servicesGrid.classList.remove('show');
-                
-                if (cloudsTitle) {
-                    const newTitle = cloudsTitle.cloneNode(true);
-                    cloudsTitle.parentNode.replaceChild(newTitle, cloudsTitle);
-                    
-                    newTitle.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (servicesGrid) servicesGrid.classList.toggle('show');
-                    });
-                }
-            } else {
-                document.body.classList.remove('mobile-accordion');
-                if (servicesGrid) servicesGrid.classList.add('show');
+            if (!aggregatorsSection || !storagesSection) return;
+            
+            // Состояние по умолчанию - всё видно
+            aggregatorsVisible = true;
+            storagesVisible = true;
+            aggregatorsSection.classList.remove('hide');
+            storagesSection.classList.remove('hide');
+            
+            // Обработчик для агрегаторов
+            if (toggleAggregatorsBtn) {
+                const newAggrBtn = toggleAggregatorsBtn.cloneNode(true);
+                toggleAggregatorsBtn.parentNode.replaceChild(newAggrBtn, toggleAggregatorsBtn);
+                newAggrBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    aggregatorsVisible = !aggregatorsVisible;
+                    if (aggregatorsVisible) {
+                        aggregatorsSection.classList.remove('hide');
+                        newAggrBtn.style.background = 'rgba(26, 35, 126, 0.8)';
+                    } else {
+                        aggregatorsSection.classList.add('hide');
+                        newAggrBtn.style.background = 'rgba(26, 35, 126, 0.5)';
+                    }
+                });
+            }
+            
+            // Обработчик для хранилищ
+            if (toggleStoragesBtn) {
+                const newStorBtn = toggleStoragesBtn.cloneNode(true);
+                toggleStoragesBtn.parentNode.replaceChild(newStorBtn, toggleStoragesBtn);
+                newStorBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    storagesVisible = !storagesVisible;
+                    if (storagesVisible) {
+                        storagesSection.classList.remove('hide');
+                        newStorBtn.style.background = 'rgba(26, 35, 126, 0.8)';
+                    } else {
+                        storagesSection.classList.add('hide');
+                        newStorBtn.style.background = 'rgba(26, 35, 126, 0.5)';
+                    }
+                });
             }
         }
 
@@ -782,7 +850,7 @@
         async function renderClouds() {
             const container = document.getElementById('cloudsGrid');
             if (accounts.length === 0) {
-                container.innerHTML = '';
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">Нет подключенных облачных хранилищ</div>';
                 return;
             }
             
@@ -1144,11 +1212,8 @@
             logoutCircleBtn.onclick = logout;
         }
 
-        initMobileAccordion();
-        
-        window.addEventListener('resize', () => {
-            initMobileAccordion();
-        });
+        // Инициализация аккордеонов
+        initAccordions();
 
         checkAuth();
         renderClouds();
