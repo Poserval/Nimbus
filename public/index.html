@@ -164,9 +164,10 @@
             user-select: none;
         }
 
+        /* Сетка 4 колонки для облачных хранилищ */
         .services-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(4, 1fr);
             gap: 12px;
             margin-bottom: 0px;
             margin-top: 10px;
@@ -179,14 +180,16 @@
             cursor: pointer;
             transition: all 0.2s;
             padding: 10px 6px;
-            border-radius: 14px;
+            border-radius: 16px;
             background: rgba(255,255,255,0.7);
             backdrop-filter: blur(4px);
+            border: 1px solid rgba(26,35,126,0.1);
         }
 
         .service-card:hover {
             background: rgba(255,255,255,0.9);
             transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .service-icon {
@@ -201,6 +204,7 @@
             font-weight: 500;
             color: #1a237e;
             text-align: center;
+            line-height: 1.3;
         }
 
         .main-content {
@@ -213,23 +217,23 @@
 
         .clouds-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 180px));
-            gap: 35px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
             justify-content: flex-start;
         }
 
         .cloud-card {
-            width: 180px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(4px);
+            border-radius: 20px;
+            padding: 16px 12px;
             text-align: center;
             cursor: grab;
             transition: all 0.3s;
-            padding: 20px 12px;
-            border-radius: 24px;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(4px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             user-select: none;
             position: relative;
+            border: 1px solid rgba(255,255,255,0.3);
         }
 
         .cloud-card:active {
@@ -245,25 +249,25 @@
             transform: scale(1.02);
             border: 2px solid #1a237e;
             background: rgba(255, 255, 255, 0.95);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
         }
 
         .cloud-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
             background: white;
         }
 
         .cloud-card img {
-            width: 110px;
-            height: 110px;
+            width: 70px;
+            height: 70px;
             object-fit: contain;
             margin-bottom: 8px;
             pointer-events: none;
         }
 
         .cloud-card-name {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             color: #1a237e;
             margin-top: 8px;
@@ -271,25 +275,25 @@
         }
 
         .cloud-card-email {
-            font-size: 11px;
+            font-size: 10px;
             color: #666;
-            margin-top: 5px;
+            margin-top: 4px;
             word-break: break-all;
             pointer-events: none;
         }
 
         .percent-circle {
-            margin: -20px auto 8px auto;
+            margin: 8px auto 0 auto;
             background: white;
-            border-radius: 50%;
-            width: 48px;
-            height: 48px;
+            border-radius: 30px;
+            width: 44px;
+            height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 14px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            font-size: 13px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
             border: 2px solid white;
             position: relative;
             z-index: 2;
@@ -483,7 +487,7 @@
             }
             
             .clouds-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
                 gap: 15px;
             }
             
@@ -492,9 +496,18 @@
             }
             
             .cloud-card {
-                width: 100%;
-                max-width: 300px;
-                margin: 0 auto;
+                padding: 12px 8px;
+            }
+            
+            .cloud-card img {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .percent-circle {
+                width: 36px;
+                height: 36px;
+                font-size: 11px;
             }
 
             .mobile-accordion .services-grid {
@@ -559,31 +572,31 @@
                 </div>
                 
                 <!-- Планируемые облака (будут добавлены позже) -->
-                <div class="service-card" data-service="dropbox" style="opacity: 0.8;">
+                <div class="service-card" data-service="dropbox">
                     <img src="assets/cloud-icon1.png" class="service-icon" alt="Dropbox">
                     <span class="service-name">Dropbox</span>
                 </div>
-                <div class="service-card" data-service="onedrive" style="opacity: 0.8;">
+                <div class="service-card" data-service="onedrive">
                     <img src="assets/cloud-icon1.png" class="service-icon" alt="OneDrive">
                     <span class="service-name">OneDrive</span>
                 </div>
-                <div class="service-card" data-service="pcloud" style="opacity: 0.8;">
+                <div class="service-card" data-service="pcloud">
                     <img src="assets/cloud-icon1.png" class="service-icon" alt="pCloud">
                     <span class="service-name">pCloud</span>
                 </div>
-                <div class="service-card" data-service="storj" style="opacity: 0.8;">
+                <div class="service-card" data-service="storj">
                     <img src="assets/cloud-icon1.png" class="service-icon" alt="Storj">
                     <span class="service-name">Storj</span>
                 </div>
-                <div class="service-card" data-service="rackspace" style="opacity: 0.8;">
+                <div class="service-card" data-service="rackspace">
                     <img src="assets/cloud-icon1.png" class="service-icon" alt="Rackspace">
                     <span class="service-name">Rackspace</span>
                 </div>
-                <div class="service-card" data-service="ncloud" style="opacity: 0.8;">
+                <div class="service-card" data-service="ncloud">
                     <img src="assets/cloud-icon1.png" class="service-icon" alt="Ncloud">
                     <span class="service-name">Ncloud</span>
                 </div>
-                <div class="service-card" data-service="appwrite" style="opacity: 0.8;">
+                <div class="service-card" data-service="appwrite">
                     <img src="assets/cloud-icon1.png" class="service-icon" alt="Appwrite">
                     <span class="service-name">Appwrite</span>
                 </div>
@@ -784,9 +797,9 @@
                     <div class="cloud-card" data-index="${i}" data-id="${acc.id}" data-token="${acc.accessToken}" data-email="${acc.email}" data-service="${acc.service}" draggable="true">
                         <div class="drag-handle" draggable="true">⋮⋮</div>
                         <img src="assets/cloud-icon1.png" alt="${acc.service}">
-                        <div class="percent-circle" style="background-color: ${bgColor}; color: white;">${percentInt}%</div>
                         <div class="cloud-card-name">${escapeHtml(acc.name)}</div>
                         <div class="cloud-card-email">${escapeHtml(acc.email)}</div>
+                        <div class="percent-circle" style="background-color: ${bgColor}; color: white;">${percentInt}%</div>
                     </div>
                 `;
             }
@@ -805,7 +818,7 @@
                     } else if (service === 'yandex') {
                         window.location.href = `storage-yandex.html?token=${token}&email=${encodeURIComponent(email)}`;
                     } else {
-                        alert(`Облако "${acc.name}" будет добавлено в следующей версии`);
+                        alert(`Облако "${card.querySelector('.cloud-card-name')?.textContent}" будет добавлено в следующей версии`);
                     }
                 });
             });
@@ -937,22 +950,20 @@
             const modalIcon = document.getElementById('modalIcon');
             const modalTitle = document.getElementById('modalTitle');
             
-            if (service === 'google') {
-                modalIcon.src = 'assets/cloud-icon1.png';
-                modalTitle.textContent = 'Google Drive';
-            } else if (service === 'yandex') {
-                modalIcon.src = 'assets/cloud-icon1.png';
-                modalTitle.textContent = 'Яндекс Диск';
-            } else if (service === 'dropbox') {
-                modalIcon.src = 'assets/cloud-icon1.png';
-                modalTitle.textContent = 'Dropbox';
-            } else if (service === 'onedrive') {
-                modalIcon.src = 'assets/cloud-icon1.png';
-                modalTitle.textContent = 'OneDrive';
-            } else {
-                modalIcon.src = 'assets/cloud-icon1.png';
-                modalTitle.textContent = 'Облачное хранилище';
-            }
+            const serviceNames = {
+                google: 'Google Drive',
+                yandex: 'Яндекс Диск',
+                dropbox: 'Dropbox',
+                onedrive: 'OneDrive',
+                pcloud: 'pCloud',
+                storj: 'Storj',
+                rackspace: 'Rackspace',
+                ncloud: 'Ncloud',
+                appwrite: 'Appwrite'
+            };
+            
+            modalIcon.src = 'assets/cloud-icon1.png';
+            modalTitle.textContent = serviceNames[service] || 'Облачное хранилище';
             
             modal.style.display = 'flex';
         }
