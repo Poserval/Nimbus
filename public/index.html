@@ -699,7 +699,7 @@
             <!-- Нижний колонтитул -->
             <div class="footer">
                 <div class="footer-description">
-                    Объединяет Google Drive и Яндекс.Диск в одном интерфейсе.<br>
+                    Объединяет облачные хранилища в одном интерфейсе.<br>
                     Управляйте файлами из разных облаков без переключения.
                 </div>
                 <div class="footer-links">
@@ -1176,7 +1176,13 @@
         const logoArea = document.getElementById('logoArea');
         logoArea.addEventListener('mouseenter', startRain);
         logoArea.addEventListener('mouseleave', stopRain);
-        logoArea.onclick = () => { window.location.href = 'index.html'; };
+        logoArea.onclick = () => {
+    // Только для веб-версии (ширина > 768px)
+    if (window.innerWidth > 768) {
+        window.location.href = 'index.html';
+    }
+    // На мобильных (ширина <= 768px) — ничего не делаем
+};
 
         document.querySelectorAll('.service-card').forEach(card => {
             card.addEventListener('click', () => {
