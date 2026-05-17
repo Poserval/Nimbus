@@ -32,7 +32,7 @@
             min-height: 100vh;
         }
 
-        /* ВЕБ-ВЕРСИЯ (ширина > 768px) — оригинальный дизайн */
+        /* ========== ВЕБ-ВЕРСИЯ (по умолчанию) ========== */
         .sidebar {
             width: 280px;
             background: transparent;
@@ -154,7 +154,7 @@
             object-fit: contain;
         }
 
-        /* Вертикальный список агрегаторов (как было изначально) */
+        /* Вертикальный список агрегаторов (веб) */
         .services-list {
             display: flex;
             flex-direction: column;
@@ -193,7 +193,7 @@
             color: #1a237e;
         }
 
-        /* Сетка подключенных облаков (оригинальный дизайн) */
+        /* Сетка подключенных облаков (веб) */
         .storages-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -456,127 +456,124 @@
             pointer-events: none;
         }
 
-        /* МОБИЛЬНАЯ ВЕРСИЯ (ширина ≤ 768px) — адаптированный дизайн */
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 100%;
-                position: relative;
-                padding: 15px;
-                height: auto;
-                overflow-y: visible;
-            }
-            
-            .main-content {
-                display: none;
-            }
-            
-            .cloud-header {
-                display: none;
-            }
-            
-            .rain-container {
-                display: none;
-            }
-            
-            .logo-area {
-                margin-bottom: 15px;
-            }
-            
-            .logo-area img {
-                width: 120px;
-            }
-            
-            .logo-area h1 {
-                font-size: 20px;
-            }
-            
-            .logo-area p {
-                font-size: 10px;
-            }
-            
-            /* Вертикальный список агрегаторов */
-            .services-list {
-                gap: 6px;
-                margin: 10px 0;
-            }
-            
-            .service-item {
-                padding: 6px 10px;
-            }
-            
-            .service-icon-small {
-                width: 28px;
-                height: 28px;
-            }
-            
-            .service-name {
-                font-size: 12px;
-            }
-            
-            /* Сетка облаков на мобильных - 4 колонки */
-            .storages-grid {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 10px;
-                margin-top: 15px;
-            }
-            
-            .cloud-card {
-                padding: 8px 4px;
-            }
-            
-            .cloud-card img {
-                width: 45px;
-                height: 45px;
-                margin-bottom: 6px;
-            }
-            
-            .cloud-card-name {
-                font-size: 8px;
-            }
-            
-            .cloud-card-email {
-                font-size: 6px;
-            }
-            
-            .percent-circle {
-                width: 32px;
-                height: 32px;
-                font-size: 9px;
-                margin-top: 6px;
-            }
-            
-            .drag-handle {
-                top: 4px;
-                right: 6px;
-                font-size: 12px;
-            }
-            
-            .logout-circle-btn {
-                width: 36px;
-                height: 36px;
-                font-size: 18px;
-                top: 10px;
-                left: 10px;
-            }
-            
-            .footer {
-                margin-top: 20px;
-                padding: 15px;
-            }
-            
-            .footer-description {
-                font-size: 9px;
-            }
-            
-            .footer-links {
-                gap: 15px;
-                font-size: 9px;
-            }
-            
-            .footer-email {
-                font-size: 8px;
-            }
+        /* ========== МОБИЛЬНАЯ ВЕРСИЯ (через класс .mobile-view) ========== */
+        body.mobile-view .sidebar {
+            width: 100%;
+            position: relative;
+            padding: 12px;
+            height: auto;
+            overflow-y: visible;
+        }
+        
+        body.mobile-view .main-content {
+            display: none;
+        }
+        
+        body.mobile-view .cloud-header {
+            display: none;
+        }
+        
+        body.mobile-view .rain-container {
+            display: none;
+        }
+        
+        body.mobile-view .logo-area {
+            margin-bottom: 15px;
+        }
+        
+        body.mobile-view .logo-area img {
+            width: 120px;
+        }
+        
+        body.mobile-view .logo-area h1 {
+            font-size: 20px;
+        }
+        
+        body.mobile-view .logo-area p {
+            font-size: 10px;
+        }
+        
+        body.mobile-view .services-list {
+            gap: 6px;
+            margin: 10px 0;
+        }
+        
+        body.mobile-view .service-item {
+            padding: 6px 10px;
+        }
+        
+        body.mobile-view .service-icon-small {
+            width: 28px;
+            height: 28px;
+        }
+        
+        body.mobile-view .service-name {
+            font-size: 12px;
+        }
+        
+        /* Мобильная сетка: 4 колонки */
+        body.mobile-view .storages-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        body.mobile-view .cloud-card {
+            padding: 8px 4px;
+        }
+        
+        body.mobile-view .cloud-card img {
+            width: 45px;
+            height: 45px;
+            margin-bottom: 6px;
+        }
+        
+        body.mobile-view .cloud-card-name {
+            font-size: 8px;
+        }
+        
+        body.mobile-view .cloud-card-email {
+            font-size: 6px;
+        }
+        
+        body.mobile-view .percent-circle {
+            width: 32px;
+            height: 32px;
+            font-size: 9px;
+            margin-top: 6px;
+        }
+        
+        body.mobile-view .drag-handle {
+            top: 4px;
+            right: 6px;
+            font-size: 12px;
+        }
+        
+        body.mobile-view .logout-circle-btn {
+            width: 36px;
+            height: 36px;
+            font-size: 18px;
+            top: 10px;
+            left: 10px;
+        }
+        
+        body.mobile-view .footer {
+            margin-top: 20px;
+            padding: 15px;
+        }
+        
+        body.mobile-view .footer-description {
+            font-size: 9px;
+        }
+        
+        body.mobile-view .footer-links {
+            gap: 15px;
+            font-size: 9px;
+        }
+        
+        body.mobile-view .footer-email {
+            font-size: 8px;
         }
     </style>
 </head>
@@ -586,7 +583,6 @@
     <button class="logout-circle-btn" id="logoutCircleBtn" title="Выйти из аккаунта">🚪</button>
     
     <div class="app-container">
-        <!-- Левая боковая панель (иконки + список облачных агрегаторов) -->
         <div class="sidebar">
             <div class="logo-area" id="logoArea">
                 <img src="assets/cloud-icon.png" alt="Nimbus">
@@ -599,7 +595,6 @@
                 <img src="assets/cloud-icon1.png" alt="Cloud" class="cloud-header-icon">
             </div>
 
-            <!-- ВЕРТИКАЛЬНЫЙ СПИСОК ОБЛАЧНЫХ АГРЕГАТОРОВ (как было изначально) -->
             <div class="services-list" id="servicesList">
                 <div class="service-item" data-service="google">
                     <img src="assets/cloud-icon1.png" class="service-icon-small" alt="Google">
@@ -639,7 +634,6 @@
                 </div>
             </div>
 
-            <!-- Нижний колонтитул -->
             <div class="footer">
                 <div class="footer-description">
                     Объединяет Google Drive и Яндекс.Диск в одном интерфейсе.<br>
@@ -655,7 +649,6 @@
             </div>
         </div>
 
-        <!-- Правая область: сетка подключённых облаков -->
         <div class="main-content">
             <div id="cloudsGrid" class="storages-grid"></div>
         </div>
@@ -679,12 +672,16 @@
     <script src="js/nimbus-common.js"></script>
     
     <script>
+        // Определяем мобильное устройство и вешаем класс
+        if (window.innerWidth <= 768) {
+            document.body.classList.add('mobile-view');
+        }
+
         // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
         let pendingService = null;
         let accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
         let draggedCardIndex = null;
         let draggedCardElement = null;
-        let isMobile = window.innerWidth <= 768;
 
         function saveAccounts() {
             localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
@@ -1125,7 +1122,6 @@
             window.location.href = 'index.html';
         };
 
-        // Обработчики для списка агрегаторов
         document.querySelectorAll('.service-item').forEach(item => {
             item.addEventListener('click', () => {
                 const service = item.dataset.service;
