@@ -32,7 +32,6 @@
             min-height: 100vh;
         }
 
-        /* ========== ВЕБ-ВЕРСИЯ (ОРИГИНАЛЬНЫЙ ДИЗАЙН) ========== */
         .sidebar {
             width: 280px;
             background: transparent;
@@ -143,80 +142,104 @@
             z-index: 2;
         }
 
-        /* Облачные агрегаторы (вертикальный список для веб-версии) */
+        /* Заголовки секций */
         .section-title {
             font-size: 15px;
             font-weight: 600;
             color: #1a237e;
             text-align: center;
-            margin-bottom: 0px;
-            margin-top: -10px;
+            margin: 20px 0 10px 0;
+            padding: 8px;
+            background: rgba(26,35,126,0.1);
+            border-radius: 30px;
         }
 
-        .services-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin: 10px 0 20px 0;
+        /* Горизонтальный скролл для агрегаторов */
+        .aggregators-wrapper {
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            margin: 0 -20px;
+            padding: 0 20px 10px 20px;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
         }
 
-        .service-item {
-            display: flex;
-            align-items: center;
+        .services-grid {
+            display: inline-flex;
             gap: 12px;
-            padding: 8px 12px;
-            border-radius: 14px;
-            background: rgba(255,255,255,0.7);
-            backdrop-filter: blur(4px);
+            white-space: normal;
+        }
+
+        .service-card {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
             cursor: pointer;
             transition: all 0.2s;
+            padding: 10px 12px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(26,35,126,0.1);
+            min-width: 85px;
         }
 
-        .service-item:hover {
+        .service-card:hover {
             background: rgba(255,255,255,0.9);
-            transform: translateX(4px);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .service-icon {
-            width: 36px;
-            height: 36px;
+            width: 50px;
+            height: 50px;
             object-fit: contain;
+            margin-bottom: 6px;
         }
 
         .service-name {
-            font-size: 13px;
-            font-weight: 500;
+            font-size: 10px;
+            font-weight: 600;
             color: #1a237e;
+            text-align: center;
+            line-height: 1.3;
         }
 
-        /* Правая область с карточками облаков (веб-версия) */
-        .main-content {
-            flex: 1;
-            margin-left: 280px;
-            padding: 30px 30px 30px 20px;
-            min-height: 100vh;
-            overflow-y: auto;
+        /* Горизонтальный скролл для подключенных хранилищ */
+        .storages-wrapper {
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            margin: 0 -20px;
+            padding: 0 20px 10px 20px;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
         }
 
-        .clouds-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 180px));
-            gap: 35px;
-            justify-content: flex-start;
+        .storages-grid {
+            display: inline-flex;
+            gap: 12px;
+            white-space: normal;
         }
 
         .cloud-card {
-            width: 180px;
-            text-align: center;
-            cursor: grab;
-            transition: all 0.3s;
-            padding: 20px 12px;
-            border-radius: 24px;
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(4px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            padding: 12px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             user-select: none;
             position: relative;
+            border: 1px solid rgba(255,255,255,0.3);
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            width: 110px;
+            flex-shrink: 0;
         }
 
         .cloud-card:active {
@@ -232,62 +255,61 @@
             transform: scale(1.02);
             border: 2px solid #1a237e;
             background: rgba(255, 255, 255, 0.95);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
         }
 
         .cloud-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
             background: white;
         }
 
         .cloud-card img {
-            width: 110px;
-            height: 110px;
+            width: 60px;
+            height: 60px;
             object-fit: contain;
-            margin-bottom: 8px;
+            margin: 0 auto 8px auto;
             pointer-events: none;
         }
 
         .cloud-card-name {
-            font-size: 16px;
-            font-weight: 600;
+            font-size: 11px;
+            font-weight: 700;
             color: #1a237e;
-            margin-top: 8px;
+            margin-top: 6px;
             pointer-events: none;
+            line-height: 1.3;
         }
 
         .cloud-card-email {
-            font-size: 11px;
+            font-size: 8px;
             color: #666;
-            margin-top: 5px;
+            margin-top: 4px;
             word-break: break-all;
             pointer-events: none;
         }
 
         .percent-circle {
-            margin: -20px auto 8px auto;
+            margin: 10px auto 0 auto;
             background: white;
-            border-radius: 50%;
-            width: 48px;
-            height: 48px;
+            border-radius: 30px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 14px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            font-size: 11px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
             border: 2px solid white;
-            position: relative;
-            z-index: 2;
             pointer-events: none;
         }
 
         .drag-handle {
             position: absolute;
             top: 8px;
-            right: 12px;
-            font-size: 18px;
+            right: 10px;
+            font-size: 16px;
             color: #999;
             cursor: grab;
             opacity: 0;
@@ -304,16 +326,26 @@
             cursor: grabbing;
         }
 
-        /* Пустое состояние */
+        /* Пустое состояние для хранилищ */
         .empty-storages {
             text-align: center;
-            padding: 60px 20px;
-            color: #1a237e;
-            font-size: 16px;
+            padding: 30px 20px;
+            color: #666;
+            font-size: 14px;
             background: rgba(255,255,255,0.6);
-            border-radius: 30px;
-            backdrop-filter: blur(4px);
-            border: 2px dashed rgba(26,35,126,0.3);
+            border-radius: 20px;
+            border: 1px dashed #1a237e;
+            margin: 10px 0;
+            width: 280px;
+            flex-shrink: 0;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 30px 30px 30px 20px;
+            min-height: 100vh;
+            overflow-y: auto;
         }
 
         .trash-bin {
@@ -404,22 +436,23 @@
         .modal-content button:hover {
             background: #0d1642;
         }
-
+        
         .footer {
-            margin-top: 40px;
+            margin-top: 30px;
             padding: 20px 15px 25px;
             border-top: 1px solid rgba(26, 35, 126, 0.25);
             text-align: center;
             background: transparent;
+            flex-shrink: 0;
         }
-
+        
         .footer-description {
             font-size: 10px;
             color: #555;
             margin-bottom: 10px;
             line-height: 1.4;
         }
-
+        
         .footer-links {
             display: flex;
             justify-content: center;
@@ -427,42 +460,42 @@
             flex-wrap: wrap;
             font-size: 10px;
         }
-
+        
         .footer-links a {
             color: #1a237e;
             text-decoration: none;
         }
-
+        
         .footer-links a:hover {
             text-decoration: underline;
         }
-
+        
         .footer-email {
             margin-top: 8px;
             font-size: 9px;
             color: #666;
         }
-
-        button, .service-item, .cloud-card, .drag-handle,
+        
+        button, .service-card, .cloud-card, .drag-handle,
         .modal-content button {
             cursor: pointer;
         }
-
+        
         input, textarea, .search-box, .limit-input {
             cursor: text;
         }
-
+        
         input[type="checkbox"] {
             cursor: pointer;
         }
-
+        
         .disabled, .action-btn.disabled {
             cursor: not-allowed !important;
             opacity: 0.5;
             pointer-events: none;
         }
 
-        /* ========== МОБИЛЬНАЯ ВЕРСИЯ (полностью отдельный дизайн) ========== */
+        /* Мобильные стили */
         @media (max-width: 768px) {
             .sidebar {
                 width: 100%;
@@ -471,133 +504,91 @@
                 height: auto;
                 overflow-y: visible;
             }
-
+            
             .main-content {
                 display: none;
             }
-
+            
             /* Убираем анимацию дождя на мобильных */
             .rain-container {
                 display: none;
             }
-
-            /* Убираем иконку cloud-header-icon */
+            
+            /* Убираем лишнюю иконку cloud-header */
             .cloud-header {
                 display: none;
             }
-
+            
             .logo-area {
                 margin-bottom: 15px;
             }
-
+            
             .logo-area img {
                 width: 100px;
             }
-
+            
             .logo-area h1 {
                 font-size: 18px;
             }
-
+            
             .logo-area p {
                 font-size: 9px;
             }
-
-            /* Заголовки секций */
+            
             .section-title {
                 font-size: 13px;
                 margin: 15px 0 8px 0;
                 padding: 6px;
-                background: rgba(26,35,126,0.1);
-                border-radius: 30px;
             }
-
-            /* Горизонтальный скролл для агрегаторов */
-            .aggregators-wrapper {
-                overflow-x: auto;
-                overflow-y: hidden;
-                white-space: nowrap;
-                margin: 0 -12px;
-                padding: 0 12px 8px 12px;
-                scrollbar-width: thin;
-                -webkit-overflow-scrolling: touch;
-            }
-
-            .services-list {
-                display: inline-flex;
-                flex-direction: row;
+            
+            .services-grid {
                 gap: 8px;
-                white-space: normal;
-                margin: 0;
             }
-
-            .service-item {
-                display: inline-flex;
-                flex-direction: column;
-                align-items: center;
+            
+            .service-card {
                 min-width: 70px;
                 padding: 6px 8px;
             }
-
+            
             .service-icon {
                 width: 35px;
                 height: 35px;
             }
-
+            
             .service-name {
                 font-size: 8px;
             }
-
-            /* Горизонтальный скролл для подключенных хранилищ */
-            .storages-wrapper {
-                overflow-x: auto;
-                overflow-y: hidden;
-                white-space: nowrap;
-                margin: 0 -12px;
-                padding: 0 12px 8px 12px;
-                scrollbar-width: thin;
-                -webkit-overflow-scrolling: touch;
-            }
-
-            .clouds-grid {
-                display: inline-flex;
-                gap: 8px;
-                white-space: normal;
-            }
-
+            
             .cloud-card {
                 width: 85px;
                 padding: 8px 4px;
-                display: inline-flex;
-                flex-shrink: 0;
-                margin: 0;
             }
-
+            
             .cloud-card img {
                 width: 45px;
                 height: 45px;
             }
-
+            
             .cloud-card-name {
                 font-size: 8px;
             }
-
+            
             .cloud-card-email {
                 font-size: 6px;
             }
-
+            
             .percent-circle {
                 width: 32px;
                 height: 32px;
                 font-size: 9px;
-                margin: 5px auto 0 auto;
             }
-
+            
             .drag-handle {
                 top: 4px;
                 right: 6px;
                 font-size: 12px;
             }
-
+            
             .logout-circle-btn {
                 width: 36px;
                 height: 36px;
@@ -605,41 +596,49 @@
                 top: 10px;
                 left: 10px;
             }
-
-            .empty-storages {
-                font-size: 12px;
-                padding: 20px;
-                white-space: normal;
-                min-width: 200px;
+            
+            .storages-wrapper {
+                margin: 0 -12px;
+                padding: 0 12px 8px 12px;
             }
-
+            
+            .aggregators-wrapper {
+                margin: 0 -12px;
+                padding: 0 12px 8px 12px;
+            }
+            
             .footer {
                 margin-top: 20px;
                 padding: 15px 12px 20px;
             }
-
+            
             .footer-description {
                 font-size: 9px;
             }
-
+            
             .footer-links {
                 gap: 15px;
                 font-size: 9px;
             }
-
+            
             .footer-email {
                 font-size: 8px;
+            }
+            
+            .empty-storages {
+                width: 220px;
+                padding: 20px 15px;
+                font-size: 12px;
             }
         }
     </style>
 </head>
 <body>
     <div class="bg-overlay"></div>
-
+    
     <button class="logout-circle-btn" id="logoutCircleBtn" title="Выйти из аккаунта">🚪</button>
-
+    
     <div class="app-container">
-        <!-- Левая панель (веб-версия) -->
         <div class="sidebar">
             <div class="logo-area" id="logoArea">
                 <img src="assets/cloud-icon.png" alt="Nimbus">
@@ -648,57 +647,61 @@
                 <p>Cloud Manager</p>
             </div>
 
-            <!-- Облачные агрегаторы (вертикальный список для веб, горизонтальный для мобильных) -->
+            <!-- Удалена иконка cloud-header -->
+
+            <!-- Заголовок Облачные агрегаторы -->
             <div class="section-title">☁️ Облачные агрегаторы</div>
+            
+            <!-- Секция агрегаторов -->
             <div class="aggregators-wrapper">
-                <div class="services-list" id="servicesList">
-                    <div class="service-item" data-service="google">
+                <div class="services-grid" id="servicesGrid">
+                    <div class="service-card" data-service="google">
                         <img src="assets/cloud-icon1.png" class="service-icon" alt="Google">
                         <span class="service-name">Google Drive</span>
                     </div>
-                    <div class="service-item" data-service="yandex">
+                    <div class="service-card" data-service="yandex">
                         <img src="assets/cloud-icon1.png" class="service-icon" alt="Yandex">
                         <span class="service-name">Яндекс.Диск</span>
                     </div>
-                    <div class="service-item" data-service="dropbox">
+                    <div class="service-card" data-service="dropbox">
                         <img src="assets/cloud-icon1.png" class="service-icon" alt="Dropbox">
                         <span class="service-name">Dropbox</span>
                     </div>
-                    <div class="service-item" data-service="onedrive">
+                    <div class="service-card" data-service="onedrive">
                         <img src="assets/cloud-icon1.png" class="service-icon" alt="OneDrive">
                         <span class="service-name">OneDrive</span>
                     </div>
-                    <div class="service-item" data-service="pcloud">
+                    <div class="service-card" data-service="pcloud">
                         <img src="assets/cloud-icon1.png" class="service-icon" alt="pCloud">
                         <span class="service-name">pCloud</span>
                     </div>
-                    <div class="service-item" data-service="storj">
+                    <div class="service-card" data-service="storj">
                         <img src="assets/cloud-icon1.png" class="service-icon" alt="Storj">
                         <span class="service-name">Storj</span>
                     </div>
-                    <div class="service-item" data-service="rackspace">
+                    <div class="service-card" data-service="rackspace">
                         <img src="assets/cloud-icon1.png" class="service-icon" alt="Rackspace">
                         <span class="service-name">Rackspace</span>
                     </div>
-                    <div class="service-item" data-service="ncloud">
+                    <div class="service-card" data-service="ncloud">
                         <img src="assets/cloud-icon1.png" class="service-icon" alt="Ncloud">
                         <span class="service-name">Ncloud</span>
                     </div>
-                    <div class="service-item" data-service="appwrite">
+                    <div class="service-card" data-service="appwrite">
                         <img src="assets/cloud-icon1.png" class="service-icon" alt="Appwrite">
                         <span class="service-name">Appwrite</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Облачные хранилища (заголовок) -->
+            <!-- Заголовок Облачные хранилища -->
             <div class="section-title">☁️ Облачные хранилища</div>
-
-            <!-- Секция подключенных хранилищ -->
+            
+            <!-- Секция подключенных хранилищ (горизонтальный скролл) -->
             <div class="storages-wrapper">
-                <div id="cloudsGrid" class="clouds-grid"></div>
+                <div id="cloudsGrid" class="storages-grid"></div>
             </div>
-
+            
             <!-- Нижний колонтитул -->
             <div class="footer">
                 <div class="footer-description">
@@ -715,9 +718,8 @@
             </div>
         </div>
 
-        <!-- Правая область (только для веб-версии) -->
         <div class="main-content">
-            <!-- Здесь ничего нет, всё в левой панели, но для веб-версии можно добавить приветствие -->
+            <!-- Веб-версия: здесь будут карточки облаков -->
         </div>
     </div>
 
@@ -737,7 +739,7 @@
 
     <script src="js/config.js"></script>
     <script src="js/nimbus-common.js"></script>
-
+    
     <script>
         // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
         let pendingService = null;
@@ -755,7 +757,7 @@
                 const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota', {
                     headers: { Authorization: `Bearer ${acc.accessToken}` }
                 });
-
+                
                 if (response.status === 401 && acc.refreshToken) {
                     const refreshResponse = await fetch(CONFIG.PROXY_URL, {
                         method: 'POST',
@@ -802,7 +804,7 @@
                 const response = await fetch('https://cloud-api.yandex.net/v1/disk/', {
                     headers: { Authorization: `OAuth ${acc.accessToken}` }
                 });
-
+                
                 if (response.status === 401 && acc.refreshToken) {
                     const refreshResponse = await fetch(CONFIG.PROXY_URL, {
                         method: 'POST',
@@ -856,17 +858,17 @@
         async function renderClouds() {
             const container = document.getElementById('cloudsGrid');
             if (accounts.length === 0) {
-                container.innerHTML = '<div class="empty-storages">✨ Здесь будут Ваши облачные хранилища</div>';
+                container.innerHTML = '<div class="empty-storages">📁 Здесь будут Ваши облачные хранилища</div>';
                 return;
             }
-
+            
             let html = '';
             for (let i = 0; i < accounts.length; i++) {
                 const acc = accounts[i];
                 const info = await updateStorageInfo(acc);
                 const percentInt = info ? Math.round(info.percent) : 0;
                 const bgColor = info ? getColorForPercent(info.percent) : '#4caf50';
-
+                
                 html += `
                     <div class="cloud-card" data-index="${i}" data-id="${acc.id}" data-token="${acc.accessToken}" data-email="${acc.email}" data-service="${acc.service}" draggable="true">
                         <div class="drag-handle" draggable="true">⋮⋮</div>
@@ -877,16 +879,16 @@
                     </div>
                 `;
             }
-
+            
             container.innerHTML = html;
-
+            
             document.querySelectorAll('.cloud-card[data-token]').forEach(card => {
                 card.addEventListener('click', (e) => {
                     if (e.target.classList.contains('drag-handle')) return;
                     const token = card.dataset.token;
                     const email = card.dataset.email;
                     const service = card.dataset.service;
-
+                    
                     if (service === 'google') {
                         window.location.href = `storage.html?token=${token}&email=${encodeURIComponent(email)}`;
                     } else if (service === 'yandex') {
@@ -896,14 +898,14 @@
                     }
                 });
             });
-
+            
             initDragAndDrop();
         }
 
         function initDragAndDrop() {
             const cards = document.querySelectorAll('.cloud-card');
             const trashBin = document.getElementById('trashBin');
-
+            
             cards.forEach(card => {
                 card.addEventListener('dragstart', (e) => {
                     e.dataTransfer.setData('text/plain', card.dataset.index);
@@ -913,7 +915,7 @@
                     draggedCardElement = card;
                     trashBin.classList.add('active');
                 });
-
+                
                 card.addEventListener('dragend', (e) => {
                     card.classList.remove('dragging');
                     document.querySelectorAll('.cloud-card').forEach(c => {
@@ -924,7 +926,7 @@
                     draggedCardIndex = null;
                     draggedCardElement = null;
                 });
-
+                
                 card.addEventListener('dragover', (e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
@@ -933,60 +935,60 @@
                         targetCard.classList.add('drag-over');
                     }
                 });
-
+                
                 card.addEventListener('dragleave', (e) => {
                     const targetCard = e.target.closest('.cloud-card');
                     if (targetCard) {
                         targetCard.classList.remove('drag-over');
                     }
                 });
-
+                
                 card.addEventListener('drop', (e) => {
                     e.preventDefault();
                     const targetCard = e.target.closest('.cloud-card');
                     if (targetCard) {
                         targetCard.classList.remove('drag-over');
                     }
-
+                    
                     if (!targetCard || draggedCardIndex === null) return;
-
+                    
                     const fromIndex = draggedCardIndex;
                     const toIndex = parseInt(targetCard.dataset.index);
-
+                    
                     if (isNaN(fromIndex) || isNaN(toIndex) || fromIndex === toIndex) return;
-
+                    
                     const [movedItem] = accounts.splice(fromIndex, 1);
                     accounts.splice(toIndex, 0, movedItem);
-
+                    
                     saveAccounts();
                 });
             });
-
+            
             trashBin.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
                 trashBin.classList.add('drag-over');
             });
-
+            
             trashBin.addEventListener('dragleave', (e) => {
                 trashBin.classList.remove('drag-over');
             });
-
+            
             trashBin.addEventListener('drop', (e) => {
                 e.preventDefault();
                 trashBin.classList.remove('drag-over');
-
+                
                 if (draggedCardIndex !== null && draggedCardElement) {
                     const email = draggedCardElement.dataset.email;
                     const name = draggedCardElement.querySelector('.cloud-card-name')?.textContent || email;
-
+                    
                     if (confirm(`Удалить облако "${name}"?\nEmail: ${email}\n\nЭто действие нельзя отменить.`)) {
                         accounts = accounts.filter((_, idx) => idx !== draggedCardIndex);
                         saveAccounts();
                         alert(`Облако "${name}" удалено`);
                     }
                 }
-
+                
                 draggedCardIndex = null;
                 draggedCardElement = null;
                 trashBin.classList.remove('active');
@@ -1023,7 +1025,7 @@
             const modal = document.getElementById('addCloudModal');
             const modalIcon = document.getElementById('modalIcon');
             const modalTitle = document.getElementById('modalTitle');
-
+            
             const serviceNames = {
                 google: 'Google Drive',
                 yandex: 'Яндекс Диск',
@@ -1035,10 +1037,10 @@
                 ncloud: 'Ncloud',
                 appwrite: 'Appwrite'
             };
-
+            
             modalIcon.src = 'assets/cloud-icon1.png';
             modalTitle.textContent = serviceNames[service] || 'Облачное хранилище';
-
+            
             modal.style.display = 'flex';
         }
 
@@ -1055,22 +1057,22 @@
                     body: JSON.stringify({ code, service: 'google' })
                 });
                 const data = await response.json();
-
+                
                 if (response.ok && data.access_token) {
                     const userInfo = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
                         headers: { Authorization: `Bearer ${data.access_token}` }
                     });
                     const user = await userInfo.json();
-
+                    
                     const existingAccount = accounts.find(acc => acc.email === user.email && acc.service === 'google');
                     if (existingAccount) {
                         alert(`Аккаунт ${user.email} уже подключён. Нельзя добавить дубликат.`);
                         document.getElementById('addCloudModal').style.display = 'none';
                         return;
                     }
-
+                    
                     localStorage.setItem(`limit_${user.email}`, '15');
-
+                    
                     accounts.push({
                         id: Date.now(),
                         service: 'google',
@@ -1102,23 +1104,23 @@
                     body: JSON.stringify({ code, service: 'yandex' })
                 });
                 const data = await response.json();
-
+                
                 if (response.ok && data.access_token) {
                     const userInfo = await fetch('https://login.yandex.ru/info', {
                         headers: { Authorization: `OAuth ${data.access_token}` }
                     });
                     const user = await userInfo.json();
                     const userEmail = user.default_email || `${user.login}@yandex.ru`;
-
+                    
                     const existingAccount = accounts.find(acc => acc.email === userEmail && acc.service === 'yandex');
                     if (existingAccount) {
                         alert(`Аккаунт ${userEmail} уже подключён. Нельзя добавить дубликат.`);
                         document.getElementById('addCloudModal').style.display = 'none';
                         return;
                     }
-
+                    
                     localStorage.setItem(`limit_${userEmail}`, '15');
-
+                    
                     accounts.push({
                         id: Date.now(),
                         service: 'yandex',
@@ -1146,10 +1148,10 @@
             const urlParams = new URLSearchParams(window.location.search);
             const code = urlParams.get('code');
             const service = urlParams.get('service');
-
+            
             if (code) {
                 window.history.replaceState({}, document.title, window.location.pathname);
-
+                
                 if (service === 'google') {
                     exchangeGoogleCodeForToken(code);
                 } else if (service === 'yandex') {
@@ -1181,20 +1183,22 @@
         logoArea.addEventListener('mouseenter', startRain);
         logoArea.addEventListener('mouseleave', stopRain);
         logoArea.onclick = () => {
+            // Только для веб-версии (ширина > 768px)
             if (window.innerWidth > 768) {
                 window.location.href = 'index.html';
             }
+            // На мобильных (ширина <= 768px) — ничего не делаем
         };
 
-        document.querySelectorAll('.service-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const service = item.dataset.service;
+        document.querySelectorAll('.service-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const service = card.dataset.service;
                 if (service === 'google') {
                     showAddCloudModal('google');
                 } else if (service === 'yandex') {
                     showAddCloudModal('yandex');
                 } else {
-                    alert(`Облако "${item.querySelector('.service-name')?.textContent}" будет добавлено в следующей версии`);
+                    alert(`Облако "${card.querySelector('.service-name')?.textContent}" будет добавлено в следующей версии`);
                 }
             });
         });
@@ -1227,4 +1231,4 @@
         handleOAuthRedirect();
     </script>
 </body>
-    </html>
+</html>
