@@ -64,12 +64,7 @@
                 display: none;
             }
             
-            /* Скрываем ненужные элементы в веб-версии */
-            .sidebar .storages-wrapper {
-                display: none;
-            }
-            
-            /* Вертикальный список агрегаторов (оставляем в левой панели) */
+            /* Вертикальный список агрегаторов */
             .aggregators-wrapper {
                 overflow-x: visible;
                 margin: 0;
@@ -95,7 +90,6 @@
                 background: rgba(255,255,255,0.7);
                 backdrop-filter: blur(4px);
                 border: 1px solid rgba(26,35,126,0.1);
-                min-width: auto;
                 width: 100%;
             }
             
@@ -119,7 +113,7 @@
                 text-align: left;
             }
             
-            /* Сетка подключенных облаков в правой области (без скролла) */
+            /* Сетка подключенных облаков в правой области (веб-дизайн) */
             .main-content .storages-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -127,10 +121,8 @@
                 margin-top: 0;
             }
             
-            .cloud-card {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
+            /* Стили карточек для веб-версии (оригинальный дизайн) */
+            .main-content .cloud-card {
                 background: rgba(255, 255, 255, 0.85);
                 backdrop-filter: blur(4px);
                 border-radius: 20px;
@@ -141,38 +133,60 @@
                 box-shadow: 0 4px 12px rgba(0,0,0,0.08);
                 position: relative;
                 border: 1px solid rgba(255,255,255,0.3);
-                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
             }
             
-            .cloud-card img {
+            .main-content .cloud-card img {
                 width: 80px;
                 height: 80px;
                 object-fit: contain;
                 margin: 0 auto 12px auto;
             }
             
-            .cloud-card-name {
+            .main-content .cloud-card-name {
                 font-size: 14px;
                 font-weight: 700;
                 margin-top: 8px;
+                color: #1a237e;
             }
             
-            .cloud-card-email {
+            .main-content .cloud-card-email {
                 font-size: 10px;
                 margin-top: 4px;
+                color: #666;
+                word-break: break-all;
             }
             
-            .percent-circle {
+            .main-content .percent-circle {
                 width: 48px;
                 height: 48px;
                 font-size: 13px;
                 margin-top: 12px;
+                background: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+                border: 2px solid white;
             }
             
-            .drag-handle {
+            .main-content .drag-handle {
+                position: absolute;
                 top: 12px;
                 right: 12px;
                 font-size: 18px;
+                color: #999;
+                cursor: grab;
+                opacity: 0;
+                transition: opacity 0.2s;
+            }
+            
+            .main-content .cloud-card:hover .drag-handle {
+                opacity: 1;
             }
             
             .section-title {
@@ -187,10 +201,6 @@
             .footer {
                 margin-top: 40px;
                 padding: 20px 15px 25px;
-            }
-            
-            .footer-description {
-                font-size: 10px;
             }
         }
         
@@ -292,7 +302,7 @@
                 text-align: center;
             }
             
-            /* Горизонтальный скролл для подключенных хранилищ */
+            /* Горизонтальный скролл для подключенных хранилищ (мобильный дизайн) */
             .storages-wrapper {
                 overflow-x: auto;
                 overflow-y: hidden;
@@ -309,6 +319,7 @@
                 white-space: normal;
             }
             
+            /* Стили карточек для мобильной версии */
             .cloud-card {
                 display: inline-flex;
                 flex-direction: column;
@@ -337,11 +348,13 @@
                 font-size: 8px;
                 font-weight: 700;
                 margin-top: 4px;
+                color: #1a237e;
             }
             
             .cloud-card-email {
                 font-size: 6px;
                 margin-top: 2px;
+                color: #666;
                 word-break: break-all;
             }
             
@@ -350,12 +363,29 @@
                 height: 32px;
                 font-size: 9px;
                 margin-top: 6px;
+                background: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                border: 1px solid white;
             }
             
             .drag-handle {
+                position: absolute;
                 top: 4px;
                 right: 6px;
                 font-size: 12px;
+                color: #999;
+                cursor: grab;
+                opacity: 0;
+                transition: opacity 0.2s;
+            }
+            
+            .cloud-card:hover .drag-handle {
+                opacity: 1;
             }
             
             .logout-circle-btn {
@@ -500,7 +530,6 @@
             object-fit: contain;
         }
         
-        /* Пустое состояние для хранилищ */
         .empty-storages {
             text-align: center;
             padding: 30px 20px;
@@ -658,7 +687,7 @@
     <button class="logout-circle-btn" id="logoutCircleBtn" title="Выйти из аккаунта">🚪</button>
     
     <div class="app-container">
-        <!-- Левая боковая панель (везде одинаковая) -->
+        <!-- Левая боковая панель -->
         <div class="sidebar">
             <div class="logo-area" id="logoArea">
                 <img src="assets/cloud-icon.png" alt="Nimbus">
@@ -674,7 +703,7 @@
             <!-- Заголовок Облачные агрегаторы -->
             <div class="section-title">☁️ Облачные агрегаторы</div>
             
-            <!-- Секция агрегаторов (мобильная обёртка, в вебе превращается в вертикальный список) -->
+            <!-- Секция агрегаторов -->
             <div class="aggregators-wrapper">
                 <div class="services-grid" id="servicesGrid">
                     <div class="service-card" data-service="google">
@@ -716,7 +745,7 @@
                 </div>
             </div>
 
-            <!-- Заголовок Облачные хранилища (только для мобильных, в вебе он скрыт) -->
+            <!-- Заголовок Облачные хранилища (только для мобильных) -->
             <div class="section-title mobile-only-title" style="display: none;">☁️ Облачные хранилища</div>
             
             <!-- Секция подключенных хранилищ (в вебе скрыта, в мобильной — видна) -->
@@ -770,74 +799,9 @@
         let draggedCardIndex = null;
         let draggedCardElement = null;
         
-        // Определяем устройство
-        let isMobile = window.innerWidth <= 768;
-
         function saveAccounts() {
             localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
             renderClouds();
-        }
-
-        // Функция для обновления отображения в зависимости от устройства
-        async function renderClouds() {
-            // Для мобильных — отображаем в #mobileCloudsGrid (внутри .storages-wrapper в левой панели)
-            // Для веба — отображаем в #webCloudsGrid (в правой области)
-            const mobileContainer = document.getElementById('mobileCloudsGrid');
-            const webContainer = document.getElementById('webCloudsGrid');
-            
-            if (accounts.length === 0) {
-                const emptyHtml = '<div class="empty-storages">📁 Здесь будут Ваши облачные хранилища</div>';
-                if (mobileContainer) mobileContainer.innerHTML = emptyHtml;
-                if (webContainer) webContainer.innerHTML = emptyHtml;
-                return;
-            }
-            
-            let html = '';
-            for (let i = 0; i < accounts.length; i++) {
-                const acc = accounts[i];
-                const info = await updateStorageInfo(acc);
-                const percentInt = info ? Math.round(info.percent) : 0;
-                const bgColor = info ? getColorForPercent(info.percent) : '#4caf50';
-                
-                html += `
-                    <div class="cloud-card" data-index="${i}" data-id="${acc.id}" data-token="${acc.accessToken}" data-email="${acc.email}" data-service="${acc.service}" draggable="true">
-                        <div class="drag-handle" draggable="true">⋮⋮</div>
-                        <img src="assets/cloud-icon1.png" alt="${acc.service}">
-                        <div class="cloud-card-name">${escapeHtml(acc.name)}</div>
-                        <div class="cloud-card-email">${escapeHtml(acc.email)}</div>
-                        <div class="percent-circle" style="background-color: ${bgColor}; color: white;">${percentInt}%</div>
-                    </div>
-                `;
-            }
-            
-            // Обновляем оба контейнера (стили скроют ненужный в зависимости от экрана)
-            if (mobileContainer) mobileContainer.innerHTML = html;
-            if (webContainer) webContainer.innerHTML = html;
-            
-            // Привязываем события ко всем карточкам в обоих контейнерах
-            document.querySelectorAll('.cloud-card[data-token]').forEach(card => {
-                // Убираем старые обработчики, чтобы не дублировать
-                card.removeEventListener('click', handleCloudClick);
-                card.addEventListener('click', handleCloudClick);
-            });
-            
-            initDragAndDrop();
-        }
-        
-        function handleCloudClick(e) {
-            if (e.target.classList.contains('drag-handle')) return;
-            const card = e.currentTarget;
-            const token = card.dataset.token;
-            const email = card.dataset.email;
-            const service = card.dataset.service;
-            
-            if (service === 'google') {
-                window.location.href = `storage.html?token=${token}&email=${encodeURIComponent(email)}`;
-            } else if (service === 'yandex') {
-                window.location.href = `storage-yandex.html?token=${token}&email=${encodeURIComponent(email)}`;
-            } else {
-                alert(`Облако "${card.querySelector('.cloud-card-name')?.textContent}" будет добавлено в следующей версии`);
-            }
         }
 
         async function updateGoogleStorageInfo(acc) {
@@ -943,8 +907,63 @@
             return null;
         }
 
+        async function renderClouds() {
+            const mobileContainer = document.getElementById('mobileCloudsGrid');
+            const webContainer = document.getElementById('webCloudsGrid');
+            
+            if (accounts.length === 0) {
+                const emptyHtml = '<div class="empty-storages">📁 Здесь будут Ваши облачные хранилища</div>';
+                if (mobileContainer) mobileContainer.innerHTML = emptyHtml;
+                if (webContainer) webContainer.innerHTML = emptyHtml;
+                return;
+            }
+            
+            let html = '';
+            for (let i = 0; i < accounts.length; i++) {
+                const acc = accounts[i];
+                const info = await updateStorageInfo(acc);
+                const percentInt = info ? Math.round(info.percent) : 0;
+                const bgColor = info ? getColorForPercent(info.percent) : '#4caf50';
+                
+                html += `
+                    <div class="cloud-card" data-index="${i}" data-id="${acc.id}" data-token="${acc.accessToken}" data-email="${acc.email}" data-service="${acc.service}" draggable="true">
+                        <div class="drag-handle" draggable="true">⋮⋮</div>
+                        <img src="assets/cloud-icon1.png" alt="${acc.service}">
+                        <div class="cloud-card-name">${escapeHtml(acc.name)}</div>
+                        <div class="cloud-card-email">${escapeHtml(acc.email)}</div>
+                        <div class="percent-circle" style="background-color: ${bgColor}; color: white;">${percentInt}%</div>
+                    </div>
+                `;
+            }
+            
+            if (mobileContainer) mobileContainer.innerHTML = html;
+            if (webContainer) webContainer.innerHTML = html;
+            
+            document.querySelectorAll('.cloud-card[data-token]').forEach(card => {
+                card.removeEventListener('click', handleCloudClick);
+                card.addEventListener('click', handleCloudClick);
+            });
+            
+            initDragAndDrop();
+        }
+        
+        function handleCloudClick(e) {
+            if (e.target.classList.contains('drag-handle')) return;
+            const card = e.currentTarget;
+            const token = card.dataset.token;
+            const email = card.dataset.email;
+            const service = card.dataset.service;
+            
+            if (service === 'google') {
+                window.location.href = `storage.html?token=${token}&email=${encodeURIComponent(email)}`;
+            } else if (service === 'yandex') {
+                window.location.href = `storage-yandex.html?token=${token}&email=${encodeURIComponent(email)}`;
+            } else {
+                alert(`Облако "${card.querySelector('.cloud-card-name')?.textContent}" будет добавлено в следующей версии`);
+            }
+        }
+
         function initDragAndDrop() {
-            // Получаем все карточки из обоих контейнеров
             const cards = document.querySelectorAll('.cloud-card');
             const trashBin = document.getElementById('trashBin');
             
@@ -1264,7 +1283,6 @@
             logoutCircleBtn.onclick = logout;
         }
 
-        // Скрываем или показываем мобильный заголовок хранилищ в зависимости от устройства
         function updateMobileTitle() {
             const mobileTitle = document.querySelector('.mobile-only-title');
             if (mobileTitle) {
@@ -1276,10 +1294,8 @@
             }
         }
         
-        // Следим за изменением размера окна
         window.addEventListener('resize', () => {
             updateMobileTitle();
-            location.reload(); // Перезагружаем для применения правильных стилей
         });
 
         updateMobileTitle();
