@@ -49,7 +49,7 @@
                 z-index: 2;
             }
             
-            /* Правая область — карточки подключенных облаков */
+            /* Правая область — только для веб-версии (карточки облаков) */
             .main-content {
                 flex: 1;
                 margin-left: 280px;
@@ -59,16 +59,24 @@
                 display: block;
             }
             
-            /* Скрываем мобильные обертки */
-            .aggregators-wrapper,
+            /* Скрываем мобильные обертки для хранилищ в левой панели */
             .storages-wrapper {
+                display: none;
+            }
+            
+            /* Скрываем ненужные элементы в веб-версии */
+            .sidebar .storages-wrapper {
+                display: none;
+            }
+            
+            /* Вертикальный список агрегаторов (оставляем в левой панели) */
+            .aggregators-wrapper {
                 overflow-x: visible;
                 margin: 0;
                 padding: 0;
                 white-space: normal;
             }
             
-            /* Вертикальный список агрегаторов */
             .services-grid {
                 display: flex;
                 flex-direction: column;
@@ -111,8 +119,8 @@
                 text-align: left;
             }
             
-            /* Сетка подключенных облаков (без скролла) */
-            .storages-grid {
+            /* Сетка подключенных облаков в правой области (без скролла) */
+            .main-content .storages-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
                 gap: 20px;
@@ -184,13 +192,6 @@
             .footer-description {
                 font-size: 10px;
             }
-            
-            /* Скрываем мобильные элементы */
-            .storages-wrapper,
-            .aggregators-wrapper {
-                overflow-x: visible;
-                white-space: normal;
-            }
         }
         
         /* ===== МОБИЛЬНАЯ ВЕРСИЯ (ширина ≤ 768px) ===== */
@@ -203,8 +204,14 @@
                 overflow-y: visible;
             }
             
+            /* В мобильной версии скрываем правую область */
             .main-content {
                 display: none;
+            }
+            
+            /* В мобильной версии показываем хранилища в левой панели */
+            .sidebar .storages-wrapper {
+                display: block;
             }
             
             .rain-container {
@@ -709,12 +716,12 @@
                 </div>
             </div>
 
-            <!-- Заголовок Облачные хранилища -->
-            <div class="section-title">☁️ Облачные хранилища</div>
+            <!-- Заголовок Облачные хранилища (только для мобильных, в вебе он скрыт) -->
+            <div class="section-title mobile-only-title" style="display: none;">☁️ Облачные хранилища</div>
             
-            <!-- Секция подключенных хранилищ (в вебе становится сеткой в правой области) -->
-            <div class="storages-wrapper">
-                <div id="cloudsGrid" class="storages-grid"></div>
+            <!-- Секция подключенных хранилищ (в вебе скрыта, в мобильной — видна) -->
+            <div class="storages-wrapper" id="mobileStoragesWrapper">
+                <div id="mobileCloudsGrid" class="storages-grid"></div>
             </div>
             
             <!-- Нижний колонтитул -->
@@ -733,7 +740,7 @@
             </div>
         </div>
 
-        <!-- Правая область: только для веб-версии (карточки облаков будут перенесены сюда через CSS?) -->
+        <!-- Правая область: только для веб-версии (карточки облаков) -->
         <div class="main-content">
             <div id="webCloudsGrid" class="storages-grid"></div>
         </div>
@@ -773,9 +780,9 @@
 
         // Функция для обновления отображения в зависимости от устройства
         async function renderClouds() {
-            // Для мобильных — отображаем в .storages-grid (внутри .storages-wrapper)
+            // Для мобильных — отображаем в #mobileCloudsGrid (внутри .storages-wrapper в левой панели)
             // Для веба — отображаем в #webCloudsGrid (в правой области)
-            const mobileContainer = document.getElementById('cloudsGrid');
+            const mobileContainer = document.getElementById('mobileCloudsGrid');
             const webContainer = document.getElementById('webCloudsGrid');
             
             if (accounts.length === 0) {
@@ -1257,11 +1264,25 @@
             logoutCircleBtn.onclick = logout;
         }
 
-        // Следим за изменением размера окна, чтобы переключать режимы
+        // Скрываем или показываем мобильный заголовок хранилищ в зависимости от устройства
+        function updateMobileTitle() {
+            const mobileTitle = document.querySelector('.mobile-only-title');
+            if (mobileTitle) {
+                if (window.innerWidth <= 768) {
+                    mobileTitle.style.display = 'block';
+                } else {
+                    mobileTitle.style.display = 'none';
+                }
+            }
+        }
+        
+        // Следим за изменением размера окна
         window.addEventListener('resize', () => {
-            location.reload(); // Просто перезагружаем страницу для применения правильных стилей
+            updateMobileTitle();
+            location.reload(); // Перезагружаем для применения правильных стилей
         });
 
+        updateMobileTitle();
         checkAuth();
         renderClouds();
         handleOAuthRedirect();
