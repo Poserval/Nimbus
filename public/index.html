@@ -32,7 +32,7 @@
             min-height: 100vh;
         }
 
-        /* ========== ВЕБ-ВЕРСИЯ (по умолчанию) ========== */
+        /* ========== ВЕБ-ВЕРСИЯ (ширина > 768px) ========== */
         .sidebar {
             width: 280px;
             background: transparent;
@@ -154,7 +154,6 @@
             object-fit: contain;
         }
 
-        /* Вертикальный список агрегаторов (веб) */
         .services-list {
             display: flex;
             flex-direction: column;
@@ -193,7 +192,6 @@
             color: #1a237e;
         }
 
-        /* Сетка подключенных облаков (веб) */
         .storages-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -456,124 +454,125 @@
             pointer-events: none;
         }
 
-        /* ========== МОБИЛЬНАЯ ВЕРСИЯ (через класс .mobile-view) ========== */
-        body.mobile-view .sidebar {
-            width: 100%;
-            position: relative;
-            padding: 12px;
-            height: auto;
-            overflow-y: visible;
-        }
-        
-        body.mobile-view .main-content {
-            display: none;
-        }
-        
-        body.mobile-view .cloud-header {
-            display: none;
-        }
-        
-        body.mobile-view .rain-container {
-            display: none;
-        }
-        
-        body.mobile-view .logo-area {
-            margin-bottom: 15px;
-        }
-        
-        body.mobile-view .logo-area img {
-            width: 120px;
-        }
-        
-        body.mobile-view .logo-area h1 {
-            font-size: 20px;
-        }
-        
-        body.mobile-view .logo-area p {
-            font-size: 10px;
-        }
-        
-        body.mobile-view .services-list {
-            gap: 6px;
-            margin: 10px 0;
-        }
-        
-        body.mobile-view .service-item {
-            padding: 6px 10px;
-        }
-        
-        body.mobile-view .service-icon-small {
-            width: 28px;
-            height: 28px;
-        }
-        
-        body.mobile-view .service-name {
-            font-size: 12px;
-        }
-        
-        /* Мобильная сетка: 4 колонки */
-        body.mobile-view .storages-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin-top: 15px;
-        }
-        
-        body.mobile-view .cloud-card {
-            padding: 8px 4px;
-        }
-        
-        body.mobile-view .cloud-card img {
-            width: 45px;
-            height: 45px;
-            margin-bottom: 6px;
-        }
-        
-        body.mobile-view .cloud-card-name {
-            font-size: 8px;
-        }
-        
-        body.mobile-view .cloud-card-email {
-            font-size: 6px;
-        }
-        
-        body.mobile-view .percent-circle {
-            width: 32px;
-            height: 32px;
-            font-size: 9px;
-            margin-top: 6px;
-        }
-        
-        body.mobile-view .drag-handle {
-            top: 4px;
-            right: 6px;
-            font-size: 12px;
-        }
-        
-        body.mobile-view .logout-circle-btn {
-            width: 36px;
-            height: 36px;
-            font-size: 18px;
-            top: 10px;
-            left: 10px;
-        }
-        
-        body.mobile-view .footer {
-            margin-top: 20px;
-            padding: 15px;
-        }
-        
-        body.mobile-view .footer-description {
-            font-size: 9px;
-        }
-        
-        body.mobile-view .footer-links {
-            gap: 15px;
-            font-size: 9px;
-        }
-        
-        body.mobile-view .footer-email {
-            font-size: 8px;
+        /* ========== МОБИЛЬНАЯ ВЕРСИЯ (ширина ≤ 768px) ========== */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                padding: 15px;
+                height: auto;
+                overflow-y: visible;
+            }
+            
+            .main-content {
+                display: none;
+            }
+            
+            .cloud-header {
+                display: none;
+            }
+            
+            .rain-container {
+                display: none;
+            }
+            
+            .logo-area {
+                margin-bottom: 15px;
+            }
+            
+            .logo-area img {
+                width: 120px;
+            }
+            
+            .logo-area h1 {
+                font-size: 20px;
+            }
+            
+            .logo-area p {
+                font-size: 10px;
+            }
+            
+            .services-list {
+                gap: 6px;
+                margin: 10px 0;
+            }
+            
+            .service-item {
+                padding: 6px 10px;
+            }
+            
+            .service-icon-small {
+                width: 28px;
+                height: 28px;
+            }
+            
+            .service-name {
+                font-size: 12px;
+            }
+            
+            .storages-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 10px;
+                margin-top: 15px;
+            }
+            
+            .cloud-card {
+                padding: 8px 4px;
+            }
+            
+            .cloud-card img {
+                width: 45px;
+                height: 45px;
+                margin-bottom: 6px;
+            }
+            
+            .cloud-card-name {
+                font-size: 8px;
+            }
+            
+            .cloud-card-email {
+                font-size: 6px;
+            }
+            
+            .percent-circle {
+                width: 32px;
+                height: 32px;
+                font-size: 9px;
+                margin-top: 6px;
+            }
+            
+            .drag-handle {
+                top: 4px;
+                right: 6px;
+                font-size: 12px;
+            }
+            
+            .logout-circle-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+                top: 10px;
+                left: 10px;
+            }
+            
+            .footer {
+                margin-top: 20px;
+                padding: 15px;
+            }
+            
+            .footer-description {
+                font-size: 9px;
+            }
+            
+            .footer-links {
+                gap: 15px;
+                font-size: 9px;
+            }
+            
+            .footer-email {
+                font-size: 8px;
+            }
         }
     </style>
 </head>
@@ -672,11 +671,6 @@
     <script src="js/nimbus-common.js"></script>
     
     <script>
-        // Определяем мобильное устройство и вешаем класс
-        if (window.innerWidth <= 768) {
-            document.body.classList.add('mobile-view');
-        }
-
         // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
         let pendingService = null;
         let accounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
