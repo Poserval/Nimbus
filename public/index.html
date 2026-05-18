@@ -1403,29 +1403,33 @@
 
         // Загрузка данных
         async function init() {
-            const auth = checkAuth();
-            if (auth && auth.email) {
-                // Загружаем аккаунты с сервера
-                const serverAccounts = await loadAccountsFromServer();
-                if (serverAccounts.length > 0) {
-                    accounts = serverAccounts;
-                    localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
-                } else {
-                    // Если на сервере пусто, грузим из localStorage
-                    const localAccounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
-                    if (localAccounts.length > 0) {
-                        accounts = localAccounts;
-                        // Сохраняем локальные аккаунты на сервер
-                        for (const acc of accounts) {
-                            await saveAccountToServer(acc);
-                        }
-                    }
-                }
-            }
-            
-            updateMobileTitle();
-            await renderClouds();
-        }
+    // ВРЕМЕННО: отключаем проверку авторизации
+    // const auth = checkAuth();
+    // if (auth && auth.email) {
+    //     const serverAccounts = await loadAccountsFromServer();
+    //     if (serverAccounts.length > 0) {
+    //         accounts = serverAccounts;
+    //         localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+    //     } else {
+    //         const localAccounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+    //         if (localAccounts.length > 0) {
+    //             accounts = localAccounts;
+    //             for (const acc of accounts) {
+    //                 await saveAccountToServer(acc);
+    //             }
+    //         }
+    //     }
+    // }
+    
+    // Временное решение: просто загружаем из localStorage
+    const localAccounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+    if (localAccounts.length > 0) {
+        accounts = localAccounts;
+    }
+    
+    updateMobileTitle();
+    await renderClouds();
+}
         
         init();
         handleOAuthRedirect();
