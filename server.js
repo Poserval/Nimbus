@@ -27,7 +27,81 @@ const getRedirectUri = (req) => {
     return `https://${host}/index.html`;
 };
 
-// ========== ЭНДПОИНТЫ ДЛЯ СИНХРОНИЗАЦИИ АККАУНТОВ ==========
+// ========== АВТОРИЗАЦИЯ (РЕГИСТРАЦИЯ И ВХОД) ==========
+
+// Регистрация нового пользователя
+app.post('/register', async (req, res) => {
+    const { name, email, password } = req.body;
+    
+    if (!name || !email || !password) {
+        return res.status(400).json({ error: 'Все поля обязательны' });
+    }
+    if (password.length < 6) {
+        return res.status(400).json({ error: 'Пароль должен быть не менее 6 символов' });
+    }
+    
+    try {
+        // Проверяем, существует ли пользователь
+        const { data: existing, error: checkError } = await supabase
+            .from('users')
+            .select('email')
+            .eq('email', email)
+            .single();
+        
+        if (existing) {
+            return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+        }
+        
+        // Хешируем пароль (простейший вариант, для продакшена используйте bcrypt)
+        const { data, error } = await supabase
+            .from('users')
+            .insert([{ 
+                email, 
+                password: btoa(password),  // Внимание! Для продакшена используйте bcrypt
+                name: name,
+                created_at: new Date()
+            }]);
+        
+        if (error) throw error;
+        
+        res.json({ success: true, message: 'Регистрация успешна' });
+    } catch (err) {
+        console.error('Register error:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// Вход пользователя
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email и пароль обязательны' });
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select('email, name, password')
+            .eq('email', email)
+            .single();
+        
+        if (error || !data) {
+            return res.status(401).json({ error: 'Неверный email или пароль' });
+        }
+        
+        if (data.password !== btoa(password)) {
+            return res.status(401).json({ error: 'Неверный email или пароль' });
+        }
+        
+        res.json({ success: true, name: data.name, email: data.email });
+    } catch (err) {
+        console.error('Login error:', err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+// ========== ХРАНИЛИЩЕ АККАУНТОВ (для синхронизации облаков) ==========
 
 // Получить все аккаунты пользователя
 app.get('/accounts', async (req, res) => {
@@ -45,7 +119,6 @@ app.get('/accounts', async (req, res) => {
         
         if (error) throw error;
         
-        // Преобразуем в формат, который ожидает фронтенд
         const accounts = data.map(acc => ({
             id: acc.account_id,
             service: acc.service,
@@ -62,7 +135,7 @@ app.get('/accounts', async (req, res) => {
     }
 });
 
-// Сохранить аккаунт (добавить облако)
+// Сохранить аккаунт
 app.post('/accounts', async (req, res) => {
     const { userEmail, account } = req.body;
     if (!userEmail || !account) {
@@ -115,7 +188,7 @@ app.delete('/accounts', async (req, res) => {
     }
 });
 
-// Обновить порядок аккаунтов (при Drag&Drop)
+// Обновить порядок аккаунтов
 app.put('/accounts/order', async (req, res) => {
     const { userEmail, accounts } = req.body;
     if (!userEmail || !accounts) {
@@ -123,7 +196,6 @@ app.put('/accounts/order', async (req, res) => {
     }
     
     try {
-        // Обновляем каждый аккаунт с новым updated_at для сохранения порядка
         for (let i = 0; i < accounts.length; i++) {
             const acc = accounts[i];
             await supabase
@@ -141,7 +213,6 @@ app.put('/accounts/order', async (req, res) => {
 
 // ========== OAuth ЭНДПОИНТЫ ==========
 
-// Эндпоинт для обмена кода на токен
 app.post('/token', async (req, res) => {
     console.log('=== POST /token RAW BODY ===');
     console.log(req.body);
