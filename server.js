@@ -28,11 +28,11 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const YANDEX_CLIENT_ID = '2dad4c5424324e1c8a7240b3d2a0f6c0';
 const YANDEX_CLIENT_SECRET = process.env.YANDEX_CLIENT_SECRET;
 
-// Определяем redirect_uri (динамически)
+// Определяем redirect_uri (принудительно HTTPS)
 const getRedirectUri = (req) => {
     const host = req.get('host');
-    const protocol = req.protocol;
-    return `${protocol}://${host}/index.html`;
+    // Принудительно используем https, потому что Render добавляет его на балансировщике
+    return `https://${host}/index.html`;
 };
 
 // Эндпоинт для обмена кода на токен
