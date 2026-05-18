@@ -114,31 +114,29 @@
             }
             
             /* Сетка подключенных облаков в правой области (веб-дизайн) */
-                .main-content .storages-grid {
-                display: flex;
-                justify-content: center;
-                flex-wrap: wrap;
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 20px;
-                margin-top: 0;
-            }
-            
-            /* Стили карточек для веб-версии (оригинальный дизайн) */
-            .main-content .cloud-card {
-                background: rgba(255, 255, 255, 0.85);
-                backdrop-filter: blur(4px);
-                border-radius: 20px;
-                padding: 20px 15px;
-                text-align: center;
-                cursor: pointer;
-                transition: all 0.3s;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-                position: relative;
-                border: 1px solid rgba(255,255,255,0.3);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
+.main-content .storages-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 0;
+}
+
+/* Стили карточек для веб-версии (оригинальный дизайн) */
+.main-content .cloud-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(4px);
+    border-radius: 20px;
+    padding: 20px 15px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
             
             .main-content .cloud-card img {
                 width: 80px;
