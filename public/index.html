@@ -115,7 +115,9 @@
             
             /* Сетка подключенных облаков в правой области (веб-дизайн) */
             .main-content .storages-grid {
-                display: grid;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
                 gap: 20px;
                 margin-top: 0;
