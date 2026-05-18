@@ -786,33 +786,25 @@
         let pendingService = null;
         let currentUserEmail = null;
 
-        // Получить email текущего пользователя из сессии
         function getCurrentUserEmail() {
             const auth = JSON.parse(localStorage.getItem('nimbus_auth') || '{}');
             return auth.email || null;
         }
 
-        // Загрузить аккаунты с сервера
         async function loadAccountsFromServer() {
             const email = getCurrentUserEmail();
-            if (!email) {
-                console.log('No user email, skipping server load');
-                return [];
-            }
+            if (!email) return [];
             
             try {
                 const response = await fetch(`/accounts?email=${encodeURIComponent(email)}`);
                 if (!response.ok) throw new Error('Failed to load accounts');
-                const serverAccounts = await response.json();
-                console.log('Loaded from server:', serverAccounts);
-                return serverAccounts;
+                return await response.json();
             } catch (err) {
                 console.error('Load accounts error:', err);
                 return [];
             }
         }
 
-        // Сохранить аккаунт на сервер
         async function saveAccountToServer(account) {
             const userEmail = getCurrentUserEmail();
             if (!userEmail) return false;
@@ -823,16 +815,13 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userEmail, account })
                 });
-                if (!response.ok) throw new Error('Failed to save account');
-                console.log('Account saved to server:', account);
-                return true;
+                return response.ok;
             } catch (err) {
                 console.error('Save account error:', err);
                 return false;
             }
         }
 
-        // Удалить аккаунт с сервера
         async function deleteAccountFromServer(accountId) {
             const userEmail = getCurrentUserEmail();
             if (!userEmail) return false;
@@ -843,16 +832,13 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userEmail, accountId })
                 });
-                if (!response.ok) throw new Error('Failed to delete account');
-                console.log('Account deleted from server:', accountId);
-                return true;
+                return response.ok;
             } catch (err) {
                 console.error('Delete account error:', err);
                 return false;
             }
         }
 
-        // Обновить порядок аккаунтов на сервере
         async function updateAccountsOrderOnServer(accountsList) {
             const userEmail = getCurrentUserEmail();
             if (!userEmail) return false;
@@ -863,16 +849,13 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userEmail, accounts: accountsList })
                 });
-                if (!response.ok) throw new Error('Failed to update order');
-                console.log('Accounts order updated on server');
-                return true;
+                return response.ok;
             } catch (err) {
                 console.error('Update order error:', err);
                 return false;
             }
         }
 
-        // Сохранить аккаунты (локально + сервер)
         async function saveAccounts(accountsList) {
             accounts = accountsList;
             localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
@@ -880,7 +863,6 @@
             await renderClouds();
         }
 
-        // Добавить новый аккаунт
         async function addAccount(account) {
             accounts.push(account);
             localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
@@ -888,7 +870,6 @@
             await renderClouds();
         }
 
-        // Удалить аккаунт
         async function removeAccount(index) {
             const removed = accounts[index];
             accounts.splice(index, 1);
@@ -899,53 +880,11 @@
             await renderClouds();
         }
 
-        // ========== ОСТАЛЬНЫЕ ФУНКЦИИ ==========
-        
+        // ========== ВРЕМЕННО ОТКЛЮЧАЕМ GET ЗАПРОСЫ К GOOGLE API ==========
         async function updateGoogleStorageInfo(acc) {
-            try {
-                const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota', {
-                    headers: { Authorization: `Bearer ${acc.accessToken}` }
-                });
-                
-                if (response.status === 401 && acc.refreshToken) {
-                    const refreshResponse = await fetch(CONFIG.PROXY_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ refresh_token: acc.refreshToken, grant_type: 'refresh_token', service: 'google' })
-                    });
-                    const refreshData = await refreshResponse.json();
-                    if (refreshData.access_token) {
-                        acc.accessToken = refreshData.access_token;
-                        const index = accounts.findIndex(a => a.email === acc.email);
-                        if (index !== -1) accounts[index].accessToken = refreshData.access_token;
-                        await saveAccounts(accounts);
-                        const retryResponse = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota', {
-                            headers: { Authorization: `Bearer ${refreshData.access_token}` }
-                        });
-                        const retryData = await retryResponse.json();
-                        const usedBytes = parseInt(retryData.storageQuota.usage) || 0;
-                        const usedGB = usedBytes / (1024 * 1024 * 1024);
-                        let limitGB = 15;
-                        const savedLimit = localStorage.getItem(`limit_${acc.email}`);
-                        if (savedLimit) limitGB = parseFloat(savedLimit);
-                        const percent = Math.min(100, (usedGB / limitGB) * 100);
-                        return { percent, usedGB, limitGB };
-                    }
-                } else if (response.ok) {
-                    const data = await response.json();
-                    const usedBytes = parseInt(data.storageQuota.usage) || 0;
-                    const usedGB = usedBytes / (1024 * 1024 * 1024);
-                    let limitGB = 15;
-                    const savedLimit = localStorage.getItem(`limit_${acc.email}`);
-                    if (savedLimit) limitGB = parseFloat(savedLimit);
-                    const percent = Math.min(100, (usedGB / limitGB) * 100);
-                    return { percent, usedGB, limitGB };
-                }
-                return null;
-            } catch (err) {
-                console.error('Error getting Google storage info:', err);
-                return null;
-            }
+            // Возвращаем заглушку, чтобы избежать ошибок 401/403 и рекурсии
+            console.log('Google storage info disabled, returning default for:', acc.email);
+            return { percent: 0, usedGB: 0, limitGB: 15 };
         }
 
         async function updateYandexStorageInfo(acc) {
@@ -954,44 +893,22 @@
                     headers: { Authorization: `OAuth ${acc.accessToken}` }
                 });
                 
-                if (response.status === 401 && acc.refreshToken) {
-                    const refreshResponse = await fetch(CONFIG.PROXY_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ refresh_token: acc.refreshToken, grant_type: 'refresh_token', service: 'yandex' })
-                    });
-                    const refreshData = await refreshResponse.json();
-                    if (refreshData.access_token) {
-                        acc.accessToken = refreshData.access_token;
-                        const index = accounts.findIndex(a => a.email === acc.email);
-                        if (index !== -1) accounts[index].accessToken = refreshData.access_token;
-                        await saveAccounts(accounts);
-                        const retryResponse = await fetch('https://cloud-api.yandex.net/v1/disk/', {
-                            headers: { Authorization: `OAuth ${refreshData.access_token}` }
-                        });
-                        const retryData = await retryResponse.json();
-                        const usedBytes = retryData.used_space || 0;
-                        const usedGB = usedBytes / (1024 * 1024 * 1024);
-                        let limitGB = 15;
-                        const savedLimit = localStorage.getItem(`limit_${acc.email}`);
-                        if (savedLimit) limitGB = parseFloat(savedLimit);
-                        const percent = Math.min(100, (usedGB / limitGB) * 100);
-                        return { percent, usedGB, limitGB };
-                    }
-                } else if (response.ok) {
-                    const data = await response.json();
-                    const usedBytes = data.used_space || 0;
-                    const usedGB = usedBytes / (1024 * 1024 * 1024);
-                    let limitGB = 15;
-                    const savedLimit = localStorage.getItem(`limit_${acc.email}`);
-                    if (savedLimit) limitGB = parseFloat(savedLimit);
-                    const percent = Math.min(100, (usedGB / limitGB) * 100);
-                    return { percent, usedGB, limitGB };
+                if (!response.ok) {
+                    console.warn('Yandex API error:', response.status);
+                    return { percent: 0, usedGB: 0, limitGB: 5 };
                 }
-                return null;
+                
+                const data = await response.json();
+                const usedBytes = data.used_space || 0;
+                const usedGB = usedBytes / (1024 * 1024 * 1024);
+                let limitGB = 5;
+                const savedLimit = localStorage.getItem(`limit_${acc.email}`);
+                if (savedLimit) limitGB = parseFloat(savedLimit);
+                const percent = Math.min(100, (usedGB / limitGB) * 100);
+                return { percent, usedGB, limitGB };
             } catch (err) {
                 console.error('Error getting Yandex storage info:', err);
-                return null;
+                return { percent: 0, usedGB: 0, limitGB: 5 };
             }
         }
 
@@ -1001,7 +918,7 @@
             } else if (acc.service === 'yandex') {
                 return await updateYandexStorageInfo(acc);
             }
-            return null;
+            return { percent: 0, usedGB: 0, limitGB: 15 };
         }
 
         async function renderClouds() {
@@ -1336,22 +1253,19 @@
             }
         }
 
-        // ========== НОВАЯ СИСТЕМА РЕГИСТРАЦИИ ТОЛЬКО ПО EMAIL ==========
-        
-        // Регистрация нового пользователя
         async function registerUser(email, password, name) {
             try {
                 const response = await fetch('/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password, name })
+                    body: JSON.stringify({ name, email, password })
                 });
                 const data = await response.json();
                 
                 if (response.ok) {
                     localStorage.setItem('nimbus_auth', JSON.stringify({
                         email: email,
-                        name: name || email.split('@')[0],
+                        name: name,
                         expires: Date.now() + 30 * 24 * 60 * 60 * 1000
                     }));
                     alert('Регистрация успешна!');
@@ -1361,11 +1275,10 @@
                 }
             } catch (err) {
                 console.error('Register error:', err);
-                alert('Ошибка соединения');
+                alert('Ошибка соединения с сервером');
             }
         }
         
-        // Вход пользователя
         async function loginUser(email, password) {
             try {
                 const response = await fetch('/login', {
@@ -1388,11 +1301,10 @@
                 }
             } catch (err) {
                 console.error('Login error:', err);
-                alert('Ошибка соединения');
+                alert('Ошибка соединения с сервером');
             }
         }
 
-        // Проверка авторизации (редирект на страницу входа)
         function checkAuth() {
             const auth = JSON.parse(localStorage.getItem('nimbus_auth') || 'null');
             if (!auth || auth.expires < Date.now()) {
@@ -1468,7 +1380,6 @@
             updateMobileTitle();
         });
 
-        // Загрузка данных при входе на главную страницу
         async function init() {
             const auth = checkAuth();
             if (auth && auth.email) {
@@ -1492,7 +1403,6 @@
             await renderClouds();
         }
         
-        // Экспортируем функции для страницы регистрации (в reg/index-reg.html)
         window.registerUser = registerUser;
         window.loginUser = loginUser;
         
