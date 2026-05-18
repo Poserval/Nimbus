@@ -114,10 +114,10 @@
             }
             
             /* Сетка подключенных облаков в правой области (веб-дизайн) */
-            .main-content .storages-grid {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
+                .main-content .storages-grid {
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
                 gap: 20px;
                 margin-top: 0;
@@ -208,7 +208,7 @@
         
         /* ===== МОБИЛЬНАЯ ВЕРСИЯ (ширина ≤ 768px) ===== */
         @media (max-width: 768px) {
-            .sidebar {
+                .sidebar {
                 width: 100%;
                 position: relative;
                 padding: 12px;
@@ -306,22 +306,27 @@
             
             /* Горизонтальный скролл для подключенных хранилищ (мобильный дизайн) */
             .storages-wrapper {
-                overflow-x: auto;
-                overflow-y: hidden;
-                white-space: nowrap;
-                margin: 0 -12px;
-                padding: 0 12px 8px 12px;
-                scrollbar-width: thin;
-                -webkit-overflow-scrolling: touch;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            margin: 0 -12px;
+            padding: 0 12px 8px 12px;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
             }
-            
+    
             .storages-grid {
-        display: inline-flex;
-        justify-content: center;   /* ← добавить эту строку */
-        gap: 10px;
-        width: 100%;
-                white-space: normal;
+            display: inline-flex;
+            gap: 10px;
+            white-space: normal;
+            /* justify-content: center — НЕ ДОБАВЛЯТЬ */
             }
+    
+    /* Пустое состояние — если табличка одна, можно центрировать, но лучше оставить слева */
+    .empty-storages {
+        margin-left: 0;
+        width: 220px;
+    }
             
             /* Стили карточек для мобильной версии */
             .cloud-card {
