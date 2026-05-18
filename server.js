@@ -1,26 +1,19 @@
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
-const path = require('path');
-const fs = require('fs');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Supabase клиент
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 // Мидлвары
 app.use(express.json());
-
-// Универсальная настройка статики: проверяем наличие папки public
-const publicPath = path.join(__dirname, 'public');
-if (fs.existsSync(publicPath)) {
-    // На сервере (GitHub) — используем папку public
-    app.use(express.static(publicPath));
-    console.log('📁 Serving static files from: public/');
-} else {
-    // Локально — используем корневую папку
-    app.use(express.static(__dirname));
-    console.log('📁 Serving static files from: root directory');
-}
+app.use(express.static('public'));
 
 // Конфигурация OAuth
 const GOOGLE_CLIENT_ID = '944030768816-dknh5820s2knnbnrlde52q4hg2evcl2u.apps.googleusercontent.com';
@@ -31,9 +24,122 @@ const YANDEX_CLIENT_SECRET = process.env.YANDEX_CLIENT_SECRET;
 // Определяем redirect_uri (принудительно HTTPS)
 const getRedirectUri = (req) => {
     const host = req.get('host');
-    // Принудительно используем https, потому что Render добавляет его на балансировщике
     return `https://${host}/index.html`;
 };
+
+// ========== ЭНДПОИНТЫ ДЛЯ СИНХРОНИЗАЦИИ АККАУНТОВ ==========
+
+// Получить все аккаунты пользователя
+app.get('/accounts', async (req, res) => {
+    const userEmail = req.query.email;
+    if (!userEmail) {
+        return res.status(400).json({ error: 'Email required' });
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('user_accounts')
+            .select('*')
+            .eq('user_email', userEmail)
+            .order('created_at', { ascending: true });
+        
+        if (error) throw error;
+        
+        // Преобразуем в формат, который ожидает фронтенд
+        const accounts = data.map(acc => ({
+            id: acc.account_id,
+            service: acc.service,
+            name: acc.name,
+            accessToken: acc.access_token,
+            refreshToken: acc.refresh_token,
+            email: acc.email
+        }));
+        
+        res.json(accounts);
+    } catch (err) {
+        console.error('Get accounts error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Сохранить аккаунт (добавить облако)
+app.post('/accounts', async (req, res) => {
+    const { userEmail, account } = req.body;
+    if (!userEmail || !account) {
+        return res.status(400).json({ error: 'User email and account required' });
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('user_accounts')
+            .upsert({
+                user_email: userEmail,
+                account_id: account.id,
+                service: account.service,
+                name: account.name,
+                access_token: account.accessToken,
+                refresh_token: account.refreshToken || null,
+                email: account.email,
+                updated_at: new Date()
+            }, {
+                onConflict: 'user_email, account_id'
+            });
+        
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Save account error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Удалить аккаунт
+app.delete('/accounts', async (req, res) => {
+    const { userEmail, accountId } = req.body;
+    if (!userEmail || !accountId) {
+        return res.status(400).json({ error: 'User email and account ID required' });
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('user_accounts')
+            .delete()
+            .eq('user_email', userEmail)
+            .eq('account_id', accountId);
+        
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Delete account error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Обновить порядок аккаунтов (при Drag&Drop)
+app.put('/accounts/order', async (req, res) => {
+    const { userEmail, accounts } = req.body;
+    if (!userEmail || !accounts) {
+        return res.status(400).json({ error: 'User email and accounts required' });
+    }
+    
+    try {
+        // Обновляем каждый аккаунт с новым updated_at для сохранения порядка
+        for (let i = 0; i < accounts.length; i++) {
+            const acc = accounts[i];
+            await supabase
+                .from('user_accounts')
+                .update({ updated_at: new Date(), sort_order: i })
+                .eq('user_email', userEmail)
+                .eq('account_id', acc.id);
+        }
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Update order error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ========== OAuth ЭНДПОИНТЫ ==========
 
 // Эндпоинт для обмена кода на токен
 app.post('/token', async (req, res) => {
@@ -43,7 +149,6 @@ app.post('/token', async (req, res) => {
     const { code, service, refresh_token, grant_type } = req.body;
     const redirect_uri = getRedirectUri(req);
     
-    console.log('Request received:', { service, grant_type, codeExists: !!code, refreshExists: !!refresh_token });
     console.log('Redirect URI:', redirect_uri);
     
     // Обновление токена (REFRESH)
@@ -173,6 +278,7 @@ app.get('/fetch-file', async (req, res) => {
 // Запуск сервера
 app.listen(PORT, () => {
     console.log(`✅ Nimbus server running on port ${PORT}`);
-    console.log(`   Frontend: http://localhost:${PORT}/index.html`);
-    console.log(`   Proxy: http://localhost:${PORT}/token`);
+    console.log(`   Frontend: https://localhost:${PORT}/index.html`);
+    console.log(`   Proxy: https://localhost:${PORT}/token`);
+    console.log(`   Supabase: connected`);
 });
