@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Nimbus - Облачный менеджер</title>
     <style>
-        /* ВСЕ ТВОИ СТИЛИ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
@@ -876,9 +875,7 @@
         // Сохранить аккаунты (локально + сервер)
         async function saveAccounts(accountsList) {
             accounts = accountsList;
-            // Сохраняем в localStorage как резервную копию
             localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
-            // Обновляем порядок на сервере
             await updateAccountsOrderOnServer(accounts);
             await renderClouds();
         }
@@ -1224,9 +1221,15 @@
                     });
                     const user = await userInfo.json();
                     
+                    localStorage.setItem('nimbus_auth', JSON.stringify({
+                        email: user.email,
+                        name: user.name || user.email.split('@')[0],
+                        expires: Date.now() + 30 * 24 * 60 * 60 * 1000
+                    }));
+                    
                     const existingAccount = accounts.find(acc => acc.email === user.email && acc.service === 'google');
                     if (existingAccount) {
-                        alert(`Аккаунт ${user.email} уже подключён. Нельзя добавить дубликат.`);
+                        alert(`Аккаунт ${user.email} уже подключён.`);
                         document.getElementById('addCloudModal').style.display = 'none';
                         return;
                     }
@@ -1274,9 +1277,15 @@
                     const user = await userInfo.json();
                     const userEmail = user.default_email || `${user.login}@yandex.ru`;
                     
+                    localStorage.setItem('nimbus_auth', JSON.stringify({
+                        email: userEmail,
+                        name: user.login,
+                        expires: Date.now() + 30 * 24 * 60 * 60 * 1000
+                    }));
+                    
                     const existingAccount = accounts.find(acc => acc.email === userEmail && acc.service === 'yandex');
                     if (existingAccount) {
-                        alert(`Аккаунт ${userEmail} уже подключён. Нельзя добавить дубликат.`);
+                        alert(`Аккаунт ${userEmail} уже подключён.`);
                         document.getElementById('addCloudModal').style.display = 'none';
                         return;
                     }
@@ -1327,10 +1336,68 @@
             }
         }
 
+        // ========== НОВАЯ СИСТЕМА РЕГИСТРАЦИИ ТОЛЬКО ПО EMAIL ==========
+        
+        // Регистрация нового пользователя
+        async function registerUser(email, password, name) {
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, name })
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('nimbus_auth', JSON.stringify({
+                        email: email,
+                        name: name || email.split('@')[0],
+                        expires: Date.now() + 30 * 24 * 60 * 60 * 1000
+                    }));
+                    alert('Регистрация успешна!');
+                    window.location.href = 'index.html';
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            } catch (err) {
+                console.error('Register error:', err);
+                alert('Ошибка соединения');
+            }
+        }
+        
+        // Вход пользователя
+        async function loginUser(email, password) {
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('nimbus_auth', JSON.stringify({
+                        email: email,
+                        name: data.name || email.split('@')[0],
+                        expires: Date.now() + 30 * 24 * 60 * 60 * 1000
+                    }));
+                    alert('Вход выполнен!');
+                    window.location.href = 'index.html';
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                alert('Ошибка соединения');
+            }
+        }
+
+        // Проверка авторизации (редирект на страницу входа)
         function checkAuth() {
             const auth = JSON.parse(localStorage.getItem('nimbus_auth') || 'null');
             if (!auth || auth.expires < Date.now()) {
                 window.location.href = 'reg/index-reg.html';
+                return null;
             }
             return auth;
         }
@@ -1401,35 +1468,33 @@
             updateMobileTitle();
         });
 
-        // Загрузка данных
+        // Загрузка данных при входе на главную страницу
         async function init() {
-    // ВРЕМЕННО: отключаем проверку авторизации
-    // const auth = checkAuth();
-    // if (auth && auth.email) {
-    //     const serverAccounts = await loadAccountsFromServer();
-    //     if (serverAccounts.length > 0) {
-    //         accounts = serverAccounts;
-    //         localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
-    //     } else {
-    //         const localAccounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
-    //         if (localAccounts.length > 0) {
-    //             accounts = localAccounts;
-    //             for (const acc of accounts) {
-    //                 await saveAccountToServer(acc);
-    //             }
-    //         }
-    //     }
-    // }
-    
-    // Временное решение: просто загружаем из localStorage
-    const localAccounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
-    if (localAccounts.length > 0) {
-        accounts = localAccounts;
-    }
-    
-    updateMobileTitle();
-    await renderClouds();
-}
+            const auth = checkAuth();
+            if (auth && auth.email) {
+                currentUserEmail = auth.email;
+                const serverAccounts = await loadAccountsFromServer();
+                if (serverAccounts.length > 0) {
+                    accounts = serverAccounts;
+                    localStorage.setItem('nimbus_accounts', JSON.stringify(accounts));
+                } else {
+                    const localAccounts = JSON.parse(localStorage.getItem('nimbus_accounts') || '[]');
+                    if (localAccounts.length > 0) {
+                        accounts = localAccounts;
+                        for (const acc of accounts) {
+                            await saveAccountToServer(acc);
+                        }
+                    }
+                }
+            }
+            
+            updateMobileTitle();
+            await renderClouds();
+        }
+        
+        // Экспортируем функции для страницы регистрации (в reg/index-reg.html)
+        window.registerUser = registerUser;
+        window.loginUser = loginUser;
         
         init();
         handleOAuthRedirect();
